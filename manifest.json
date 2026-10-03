@@ -2,7 +2,8 @@
   "schema": 2,
   "required_executas": [
     {
-      "tool_id": "tool-dev-ai-proposal-writer-anna"
+      "tool_id": "tool-hammad-ai-proposal-writer-anna-84jkbu68",
+      "min_version": "0.1.2"
     }
   ],
   "tags": ["ai-proposal-writer-anna"],
@@ -17,14 +18,18 @@
         "name": "main",
         "title": "AI Proposal Writer",
         "default": true,
+        "entry": "index.html",
         "default_size": { "w": 1024, "h": 768 },
         "min_size": { "w": 480, "h": 360 },
-        "max_size": { "w": 1920, "h": 1200 }
+        "max_size": { "w": 1920, "h": 1200 },
+        "resizable": true,
+        "movable": true,
+        "single_instance": true
       }
     ],
     "host_api": {
-      "tools": ["tool-dev-ai-proposal-writer-anna"],
-      "storage": ["get", "set", "delete", "list"],
+      "tools": ["tool-hammad-ai-proposal-writer-anna-84jkbu68"],
+      "storage": ["get", "set", "delete"],
       "window": ["set_title", "ready"]
     },
     "csp_overrides": {},

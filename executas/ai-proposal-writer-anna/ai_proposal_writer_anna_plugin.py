@@ -18,59 +18,61 @@ import uuid
 from typing import Any
 
 MANIFEST = {
-    "name": "tool-dev-ai-proposal-writer-anna",
-    "version": "0.1.0",
+    "display_name": "AI Proposal Writer Tool",
+    "version": "0.1.2",
+    "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, and LLM sampling.",
     "host_capabilities": ["llm.sample"],
     "tools": [
         {
             "name": "ping",
             "description": "Smoke-test method.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "additionalProperties": False,
-            },
+            "parameters": [],
         },
         {
             "name": "generate_proposal",
             "description": "Generate a complete structured project proposal from input form data.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "formData": {
-                        "type": "object",
-                        "description": "Proposal form data containing steps 1 to 4.",
-                    }
-                },
-                "required": ["formData"],
-                "additionalProperties": False,
-            },
+            "parameters": [
+                {
+                    "name": "formData",
+                    "type": "object",
+                    "description": "Proposal form data containing steps 1 to 4.",
+                    "required": True,
+                }
+            ],
         },
         {
             "name": "regenerate_section",
             "description": "Regenerate a specific section of a proposal using AI.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "formData": {
-                        "type": "object",
-                        "description": "Proposal form data.",
-                    },
-                    "sectionTitle": {
-                        "type": "string",
-                        "description": "Title of the section to regenerate.",
-                    },
-                    "currentContent": {
-                        "type": "string",
-                        "description": "Current section content for context.",
-                    },
+            "parameters": [
+                {
+                    "name": "formData",
+                    "type": "object",
+                    "description": "Proposal form data.",
+                    "required": True,
                 },
-                "required": ["formData", "sectionTitle", "currentContent"],
-                "additionalProperties": False,
-            },
+                {
+                    "name": "sectionTitle",
+                    "type": "string",
+                    "description": "Title of the section to regenerate.",
+                    "required": True,
+                },
+                {
+                    "name": "currentContent",
+                    "type": "string",
+                    "description": "Current section content for context.",
+                    "required": False,
+                },
+                {
+                    "name": "instruction",
+                    "type": "string",
+                    "description": "Specific user instructions for how to rewrite the section.",
+                    "required": False,
+                },
+            ],
         },
     ],
 }
+
 
 DEFAULT_INCLUDED_SECTIONS = [
     "Executive Summary",
@@ -124,6 +126,8 @@ def stdin_reader() -> None:
                 q = host_responses.get(req_id)
             if q is not None:
                 q.put(msg)
+    # Signal EOF to main loop
+    agent_requests.put(None)
 
 
 def sample_llm(
@@ -595,6 +599,18 @@ def invoke(method: str, args: dict[str, Any], context: dict[str, Any]) -> dict[s
 
 
 def main() -> None:
+    if len(sys.argv) > 1:
+        arg = sys.argv[1].lower()
+        if arg in ("--describe", "describe"):
+            print(json.dumps(MANIFEST))
+            sys.exit(0)
+        if arg in ("--health", "health"):
+            print(json.dumps({"status": "ready"}))
+            sys.exit(0)
+        if arg in ("--version", "version", "-v"):
+            print(MANIFEST.get("version", "0.1.2"))
+            sys.exit(0)
+
     # Start stdin listener thread
     t = threading.Thread(target=stdin_reader, daemon=True)
     t.start()
@@ -602,6 +618,8 @@ def main() -> None:
     while True:
         try:
             req = agent_requests.get()
+            if req is None:
+                break
         except (KeyboardInterrupt, SystemExit):
             break
 
@@ -614,9 +632,13 @@ def main() -> None:
             elif method == "initialize":
                 result = {
                     "protocolVersion": "2.0",
+                    "server_info": {
+                        "name": MANIFEST.get("display_name", "AI Proposal Writer Tool"),
+                        "version": MANIFEST.get("version", "0.1.2"),
+                    },
                     "serverInfo": {
-                        "name": "tool-dev-ai-proposal-writer-anna",
-                        "version": "0.1.0",
+                        "name": MANIFEST.get("display_name", "AI Proposal Writer Tool"),
+                        "version": MANIFEST.get("version", "0.1.2"),
                     },
                     "capabilities": {"sampling": {}},
                 }

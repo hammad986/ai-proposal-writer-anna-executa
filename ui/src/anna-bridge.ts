@@ -3,7 +3,20 @@
  * storage synchronization, and window lifecycle with fallback for standalone preview.
  */
 
-const TOOL_ID = 'tool-dev-ai-proposal-writer-anna'
+const BUNDLED_HANDLE = 'ai-proposal-writer-anna'
+const FALLBACK_DEV_TOOL_ID = 'tool-hammad-ai-proposal-writer-anna-84jkbu68'
+
+export function getResolvedToolId(): string {
+  if (typeof window !== 'undefined') {
+    const ids = (window as any).__ANNA_TOOL_IDS__
+    if (ids && typeof ids === 'object') {
+      if (ids[BUNDLED_HANDLE]) {
+        return ids[BUNDLED_HANDLE]
+      }
+    }
+  }
+  return FALLBACK_DEV_TOOL_ID
+}
 
 interface AnnaClient {
   tools?: {
@@ -131,8 +144,10 @@ export async function invokeExecutaTool<T = any>(
     )
   }
 
+  const tool_id = getResolvedToolId()
+
   const raw = await annaClient.tools.invoke({
-    tool_id: TOOL_ID,
+    tool_id,
     method,
     args,
     timeoutMs: 65000,

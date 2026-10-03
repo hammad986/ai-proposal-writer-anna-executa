@@ -3,12 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tool-dev-ai-proposal-writer-anna"
-version = "0.1.0"
+name = "ai-proposal-writer-anna"
+version = "0.1.1"
 description = "Executa for the ai-proposal-writer-anna Anna App"
 requires-python = ">=3.10"
 
 [project.scripts]
+"ai-proposal-writer-anna" = "ai_proposal_writer_anna_plugin:main"
 "tool-dev-ai-proposal-writer-anna" = "ai_proposal_writer_anna_plugin:main"
 
 [tool.setuptools]

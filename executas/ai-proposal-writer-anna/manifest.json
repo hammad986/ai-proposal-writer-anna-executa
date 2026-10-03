@@ -1,0 +1,57 @@
+{
+  "name": "tool-hammad-ai-proposal-writer-anna-84jkbu68",
+  "slug": "ai-proposal-writer-anna",
+  "display_name": "AI Proposal Writer Tool",
+  "version": "0.1.2",
+  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, and LLM sampling.",
+  "host_capabilities": ["llm.sample"],
+  "tools": [
+    {
+      "name": "ping",
+      "description": "Smoke-test method.",
+      "parameters": []
+    },
+    {
+      "name": "generate_proposal",
+      "description": "Generate a complete structured project proposal from input form data.",
+      "parameters": [
+        {
+          "name": "formData",
+          "type": "object",
+          "description": "Proposal form data containing steps 1 to 4.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "regenerate_section",
+      "description": "Regenerate a specific section of a proposal using AI.",
+      "parameters": [
+        {
+          "name": "formData",
+          "type": "object",
+          "description": "Proposal form data.",
+          "required": true
+        },
+        {
+          "name": "sectionTitle",
+          "type": "string",
+          "description": "Title of the section to regenerate.",
+          "required": true
+        },
+        {
+          "name": "currentContent",
+          "type": "string",
+          "description": "Current section content for context.",
+          "required": false
+        },
+        {
+          "name": "instruction",
+          "type": "string",
+          "description": "Specific user instructions for how to rewrite the section.",
+          "required": false
+        }
+      ]
+    }
+  ]
+}
