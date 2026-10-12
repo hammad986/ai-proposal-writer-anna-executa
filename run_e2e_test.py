@@ -1,5 +1,6 @@
 import urllib.request
 import json
+import datetime
 import sys
 
 BASE = 'http://localhost:5180'
@@ -27,7 +28,7 @@ call_ping = {
     'ns': 'tools',
     'method': 'invoke',
     'args': {
-        'tool_id': 'ai-proposal-writer-anna',
+        'tool_id': 'tool-hammad-ai-proposal-writer-anna-84jkbu68',
         'method': 'ping',
         'args': {}
     }
@@ -71,7 +72,7 @@ call_gen = {
     'ns': 'tools',
     'method': 'invoke',
     'args': {
-        'tool_id': 'ai-proposal-writer-anna',
+        'tool_id': 'tool-hammad-ai-proposal-writer-anna-84jkbu68',
         'method': 'generate_proposal',
         'args': {'formData': sample_form}
     }
@@ -81,6 +82,14 @@ res_gen = resp_gen.get('result', {})
 proposal = res_gen.get('proposal') or res_gen.get('data', {}).get('proposal', {})
 print(f"Proposal Title: {proposal.get('title')}")
 print(f"Proposal ID: {proposal.get('id')}")
+gen_date = proposal.get('generatedDate')
+val_date = proposal.get('validUntil')
+print(f"Generated Date: {gen_date}")
+print(f"Valid Until: {val_date}")
+today_iso = datetime.date.today().isoformat()
+expected_val = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+assert gen_date == today_iso, f"Expected generatedDate {today_iso}, got {gen_date}"
+assert val_date == expected_val, f"Expected validUntil {expected_val}, got {val_date}"
 sections = proposal.get('sections', [])
 print(f"Total Sections Generated: {len(sections)}")
 for s in sections:
@@ -94,7 +103,7 @@ call_regen = {
     'ns': 'tools',
     'method': 'invoke',
     'args': {
-        'tool_id': 'ai-proposal-writer-anna',
+        'tool_id': 'tool-hammad-ai-proposal-writer-anna-84jkbu68',
         'method': 'regenerate_section',
         'args': {
             'formData': sample_form,

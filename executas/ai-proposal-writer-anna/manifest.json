@@ -2,7 +2,7 @@
   "name": "tool-hammad-ai-proposal-writer-anna-84jkbu68",
   "slug": "ai-proposal-writer-anna",
   "display_name": "AI Proposal Writer Tool",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, and LLM sampling.",
   "host_capabilities": ["llm.sample"],
   "tools": [

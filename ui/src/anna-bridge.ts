@@ -50,6 +50,7 @@ export async function initAnnaBridge(): Promise<{ isStandalone: boolean }> {
 
   try {
     // Dynamic import to prevent bundler resolving non-local path
+    // @ts-ignore
     const sdkModule = await import(/* @vite-ignore */ '/static/anna-apps/_sdk/latest/index.js')
     const { AnnaAppRuntime } = sdkModule
     annaClient = await AnnaAppRuntime.connect()

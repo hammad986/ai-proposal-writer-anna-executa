@@ -1,12 +1,13 @@
 {
   "name": "ai-proposal-writer-anna",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node tests/test_dates_frontend.mjs && python tests/test_proposal_dates.py"
   },
   "dependencies": {
     "clsx": "^2.1.1",

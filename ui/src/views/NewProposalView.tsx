@@ -10,6 +10,7 @@ import { GeneratingView } from '@/components/proposal/generating-view'
 import { StepIndicator } from '@/components/proposal/step-indicator'
 import { invokeExecutaTool } from '@/anna-bridge'
 import { emptyFormData } from '@/defaults'
+import { formatLocalDate, addDaysToIso } from '@/utils'
 import type { GeneratedProposal, ProposalFormData } from '@/types'
 
 function mergeDraft(draft?: Partial<ProposalFormData>): ProposalFormData {
@@ -113,15 +114,41 @@ export function NewProposalView({
         throw new Error('Executa did not return a valid proposal structure.')
       }
 
+      let proposal = response.proposal
+      const todayStr = formatLocalDate(new Date())
+      const defaultValidUntil = addDaysToIso(todayStr, 30)
+
+      // Defense-in-depth: Ensure generatedDate is valid and current, and validUntil reflects the 30-day window
+      if (
+        !proposal.generatedDate ||
+        proposal.generatedDate < todayStr ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(proposal.generatedDate)
+      ) {
+        proposal = {
+          ...proposal,
+          generatedDate: todayStr,
+          validUntil: defaultValidUntil,
+        }
+      } else if (
+        !proposal.validUntil ||
+        proposal.validUntil <= proposal.generatedDate ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(proposal.validUntil)
+      ) {
+        proposal = {
+          ...proposal,
+          validUntil: addDaysToIso(proposal.generatedDate, 30),
+        }
+      }
+
       // Keep minimum smooth generation animation time (approx 3.5s)
       const elapsed = Date.now() - startTime
       const remaining = Math.max(0, 3500 - elapsed)
 
       setTimeout(() => {
         setIsGenerating(false)
-        onProposalGenerated(response.proposal)
+        onProposalGenerated(proposal)
         toast.success('Proposal successfully generated!')
-        onNavigate('detail', response.proposal.id)
+        onNavigate('detail', proposal.id)
       }, remaining)
     } catch (err: any) {
       console.error('Proposal generation error:', err)

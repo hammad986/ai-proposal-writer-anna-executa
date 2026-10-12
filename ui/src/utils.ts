@@ -19,14 +19,35 @@ export function formatCurrencyINR(value: number): string {
   }).format(value)
 }
 
+export function formatLocalDate(date = new Date()): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export function parseLocalDate(isoStr: string): Date {
+  const parts = isoStr.slice(0, 10).split('-')
+  const y = Number(parts[0]) || 2026
+  const m = Number(parts[1]) || 1
+  const d = Number(parts[2]) || 1
+  return new Date(y, m - 1, d)
+}
+
 export function addDays(date: Date, days: number): Date {
   const next = new Date(date)
   next.setDate(next.getDate() + days)
   return next
 }
 
+export function addDaysToIso(isoDateStr: string, days: number): string {
+  const dt = parseLocalDate(isoDateStr)
+  dt.setDate(dt.getDate() + days)
+  return formatLocalDate(dt)
+}
+
 export function isoDate(date = new Date()): string {
-  return date.toISOString().slice(0, 10)
+  return formatLocalDate(date)
 }
 
 export function uid(prefix = 'proposal'): string {

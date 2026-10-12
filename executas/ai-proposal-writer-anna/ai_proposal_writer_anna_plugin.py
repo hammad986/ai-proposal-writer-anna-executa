@@ -19,7 +19,7 @@ from typing import Any
 
 MANIFEST = {
     "display_name": "AI Proposal Writer Tool",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, and LLM sampling.",
     "host_capabilities": ["llm.sample"],
     "tools": [
@@ -221,6 +221,9 @@ def build_proposal_prompt(form_data: dict[str, Any]) -> str:
     sections_list = step4.get("includedSections") or DEFAULT_INCLUDED_SECTIONS
     special_emphasis = step4.get("specialEmphasis") or ""
 
+    today_str = datetime.date.today().isoformat()
+    valid_until_str = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+
     return f"""You are an expert proposal writer for a software development agency called {agency_name}.
 Your proposals are professional, persuasive, and client-focused.
 You always personalize proposals using the client's name and company.
@@ -232,6 +235,9 @@ AGENCY: {agency_name} - {agency_tagline}
 CLIENT: {client_name} at {client_company}
 PROJECT: {project_name} ({project_type} for {industry} industry)
 PROBLEM: {problem}
+
+PROPOSAL DATE: {today_str}
+VALID UNTIL: {valid_until_str} (30 days validity)
 
 REQUIREMENTS:
 {features_formatted}
@@ -263,14 +269,15 @@ CRITICAL INSTRUCTIONS:
 - For phases, use this format: ## Phase N: {{name}} ({{duration}})
 - Terms must be professional, reasonable, standard freelance/agency terms
 - Call to action must include specific next steps
+- Use proposal date "{today_str}" and valid until date "{valid_until_str}"
 
 RESPOND WITH A VALID JSON OBJECT ONLY. No markdown code blocks. No preamble. No explanation.
 The JSON structure must be EXACTLY:
 {{
   "title": "Project Proposal: {project_name}",
   "subtitle": "Prepared for {client_company} by {agency_name}",
-  "generatedDate": "YYYY-MM-DD",
-  "validUntil": "YYYY-MM-DD",
+  "generatedDate": "{today_str}",
+  "validUntil": "{valid_until_str}",
   "totalValue": "{budget_range}",
   "sections": [
     {{
@@ -515,8 +522,8 @@ def normalize_proposal(
         "formData": form_data,
         "title": raw.get("title") or f"Project Proposal: {proj_name}",
         "subtitle": raw.get("subtitle") or f"Prepared for {comp_name} by {ag_name}",
-        "generatedDate": raw.get("generatedDate") or today,
-        "validUntil": raw.get("validUntil") or valid_until,
+        "generatedDate": today,
+        "validUntil": valid_until,
         "totalValue": raw.get("totalValue") or budget,
         "sections": sections,
         "status": "draft",
@@ -608,7 +615,7 @@ def main() -> None:
             print(json.dumps({"status": "ready"}))
             sys.exit(0)
         if arg in ("--version", "version", "-v"):
-            print(MANIFEST.get("version", "0.1.2"))
+            print(MANIFEST.get("version", "0.1.3"))
             sys.exit(0)
 
     # Start stdin listener thread
@@ -634,11 +641,11 @@ def main() -> None:
                     "protocolVersion": "2.0",
                     "server_info": {
                         "name": MANIFEST.get("display_name", "AI Proposal Writer Tool"),
-                        "version": MANIFEST.get("version", "0.1.2"),
+                        "version": MANIFEST.get("version", "0.1.3"),
                     },
                     "serverInfo": {
                         "name": MANIFEST.get("display_name", "AI Proposal Writer Tool"),
-                        "version": MANIFEST.get("version", "0.1.2"),
+                        "version": MANIFEST.get("version", "0.1.3"),
                     },
                     "capabilities": {"sampling": {}},
                 }
