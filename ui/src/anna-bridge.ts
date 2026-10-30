@@ -48,10 +48,24 @@ export async function initAnnaBridge(): Promise<{ isStandalone: boolean }> {
     return { isStandalone }
   }
 
+  // Detect standalone / localhost preview before attempting to load Anna host runtime
+  const isLocalPreview =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      !window.location.pathname.includes('/anna-apps/'))
+
+  if (isLocalPreview) {
+    console.info('Anna runtime not connected (standalone localhost preview mode).')
+    isStandalone = true
+    hasConnected = true
+    return { isStandalone }
+  }
+
   try {
-    // Dynamic import to prevent bundler resolving non-local path
-    // @ts-ignore
-    const sdkModule = await import(/* @vite-ignore */ '/static/anna-apps/_sdk/latest/index.js')
+    // Dynamic runtime import without Vite dev-server static scan
+    const importRuntime = new Function('url', 'return import(url)')
+    const sdkModule = await importRuntime('/static/anna-apps/_sdk/latest/index.js')
     const { AnnaAppRuntime } = sdkModule
     annaClient = await AnnaAppRuntime.connect()
     isStandalone = false
