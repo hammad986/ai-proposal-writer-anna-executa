@@ -25,7 +25,7 @@ import ai_proposal_writer_anna_plugin as plugin
 
 class TestExecutaV020(unittest.TestCase):
     def test_version_and_manifest(self):
-        self.assertEqual(plugin.MANIFEST["version"], "0.3.0")
+        self.assertEqual(plugin.MANIFEST["version"], "0.4.0")
         tool_names = [t["name"] for t in plugin.MANIFEST["tools"]]
         self.assertIn("ping", tool_names)
         self.assertIn("generate_proposal", tool_names)
@@ -35,6 +35,9 @@ class TestExecutaV020(unittest.TestCase):
         self.assertIn("extract_brief", tool_names)
         self.assertIn("compare_versions", tool_names)
         self.assertIn("calculate_roi", tool_names)
+        self.assertIn("analyze_deal_health", tool_names)
+        self.assertIn("scan_contract_risks", tool_names)
+        self.assertIn("generate_discovery_questions", tool_names)
 
     def test_ping(self):
         res = plugin.invoke("ping", {}, {})
@@ -174,6 +177,52 @@ class TestExecutaV020(unittest.TestCase):
         self.assertEqual(roi["annualCostSavings"], 57600.0)
         self.assertTrue(roi["paybackMonths"] > 0)
         self.assertTrue(roi["threeYearNetRoi"] > 0)
+
+    def test_analyze_deal_health(self):
+        sample_prop = {
+            "sections": [
+                {"title": "Executive Summary", "content": "Overview"},
+                {"title": "Scope", "content": "Deliverables"},
+                {"title": "Architecture", "content": "Cloud APIs"},
+                {"title": "Milestones", "content": "Sprints"},
+                {"title": "Pricing", "content": "Itemized"},
+                {"title": "Terms", "content": "90 day warranty included"},
+            ],
+            "pricingStructure": {"depositPercent": 40},
+        }
+        res = plugin.invoke("analyze_deal_health", {"proposal": sample_prop}, {})
+        self.assertTrue(res.get("success"), f"analyze_deal_health failed: {res}")
+        health = res["data"]["dealHealth"]
+        self.assertGreaterEqual(health["winProbability"], 40)
+        self.assertIn("factors", health)
+        self.assertIn("recommendations", health)
+
+    def test_scan_contract_risks(self):
+        sample_prop = {
+            "sections": [
+                {"title": "Scope", "content": "Build web and mobile app for client."},
+                {"title": "Pricing", "content": "Full payment at completion."},
+            ],
+        }
+        res = plugin.invoke("scan_contract_risks", {"proposal": sample_prop}, {})
+        self.assertTrue(res.get("success"), f"scan_contract_risks failed: {res}")
+        report = res["data"]["riskReport"]
+        self.assertIn(report["overallRiskLevel"], ["low", "moderate", "high"])
+        self.assertTrue(len(report["risks"]) > 0)
+        self.assertTrue(any(r["category"] == "Scope Creep" for r in report["risks"]))
+
+    def test_generate_discovery_questions(self):
+        form_data = {
+            "step1": {
+                "projectName": "FinTech Core Platform",
+                "projectType": "Full-Stack App",
+            }
+        }
+        res = plugin.invoke("generate_discovery_questions", {"formData": form_data}, {})
+        self.assertTrue(res.get("success"), f"generate_discovery_questions failed: {res}")
+        questions = res["data"]["questions"]
+        self.assertEqual(len(questions), 5)
+        self.assertTrue(any("KPI" in q["question"] for q in questions))
 
 
 if __name__ == "__main__":

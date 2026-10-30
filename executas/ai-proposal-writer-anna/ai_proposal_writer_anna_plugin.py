@@ -19,8 +19,8 @@ from typing import Any
 
 MANIFEST = {
     "display_name": "AI Proposal Writer Tool",
-    "version": "0.3.0",
-    "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, version comparison, ROI calculation, and LLM sampling.",
+    "version": "0.4.0",
+    "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, version comparison, ROI calculation, deal health analysis, contract risk scan, and discovery questions.",
     "host_capabilities": ["llm.sample"],
     "tools": [
         {
@@ -158,6 +158,42 @@ MANIFEST = {
                     "description": "Client average hourly rate value.",
                     "required": False,
                 },
+            ],
+        },
+        {
+            "name": "analyze_deal_health",
+            "description": "Predictive AI deal health & win probability scoring analyzing scope, deposit security, and objection handling.",
+            "parameters": [
+                {
+                    "name": "proposal",
+                    "type": "object",
+                    "description": "Complete proposal object to evaluate.",
+                    "required": True,
+                }
+            ],
+        },
+        {
+            "name": "scan_contract_risks",
+            "description": "AI legal and scope vulnerability scan detecting revision creep, stalling risks, and liability exposure.",
+            "parameters": [
+                {
+                    "name": "proposal",
+                    "type": "object",
+                    "description": "Complete proposal object to scan.",
+                    "required": True,
+                }
+            ],
+        },
+        {
+            "name": "generate_discovery_questions",
+            "description": "Synthesize tailored project discovery intake questions to eliminate scoping assumptions.",
+            "parameters": [
+                {
+                    "name": "formData",
+                    "type": "object",
+                    "description": "Proposal form data containing steps 1 to 4.",
+                    "required": True,
+                }
             ],
         },
     ],
@@ -1060,6 +1096,260 @@ def handle_calculate_roi(args: dict[str, Any], context: dict[str, Any]) -> dict[
     }
 
 
+def handle_analyze_deal_health(args: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    proposal = args.get("proposal", {})
+    sections = proposal.get("sections") or []
+    pricing = proposal.get("pricingStructure") or {}
+    deposit = pricing.get("depositPercent", 40)
+
+    score = 72
+    factors = []
+    strengths = []
+    deal_killers = []
+    recommendations = []
+
+    # Section completeness
+    if len(sections) >= 6:
+        score += 10
+        factors.append({
+            "name": "Scope & Section Completeness",
+            "score": 92,
+            "impact": "positive",
+            "description": f"Includes {len(sections)} granular proposal sections covering scope, architecture, and governance."
+        })
+        strengths.append("Comprehensive section coverage establishes technical credibility.")
+    else:
+        score -= 10
+        factors.append({
+            "name": "Scope & Section Completeness",
+            "score": 55,
+            "impact": "negative",
+            "description": f"Proposal only contains {len(sections)} sections. Missing key commercial or technical details."
+        })
+        deal_killers.append("Sparse sections may cause buyer hesitation on execution depth.")
+        recommendations.append("Add Timeline & Phased Milestones and Terms & Warranties sections.")
+
+    # Deposit security
+    if deposit >= 40:
+        score += 8
+        factors.append({
+            "name": "Payment & Cash Flow Protection",
+            "score": 95,
+            "impact": "positive",
+            "description": f"{deposit}% advance kickoff deposit ensures healthy cashflow and client financial commitment."
+        })
+        strengths.append(f"Strong commercial protection with a {deposit}% advance payment requirement.")
+    elif deposit < 30:
+        score -= 12
+        factors.append({
+            "name": "Payment & Cash Flow Protection",
+            "score": 45,
+            "impact": "negative",
+            "description": f"{deposit}% deposit creates excessive front-loaded financial risk for the agency."
+        })
+        deal_killers.append("Low upfront deposit exposes team to uncompensated preliminary sprint labor.")
+        recommendations.append("Increase upfront deposit to at least 40% before initiating sprint delivery.")
+    else:
+        factors.append({
+            "name": "Payment & Cash Flow Protection",
+            "score": 75,
+            "impact": "neutral",
+            "description": f"{deposit}% deposit provides standard payment security."
+        })
+
+    # Assurance & Warranty
+    content_blob = " ".join((s.get("title", "") + " " + s.get("content", "")) for s in sections)
+    if re.search(r"warrant|guarantee|sla", content_blob, re.IGNORECASE):
+        score += 8
+        factors.append({
+            "name": "Risk Reversal & Assurance",
+            "score": 90,
+            "impact": "positive",
+            "description": "Formal post-launch warranty and SLA reverses client perceived delivery risk."
+        })
+        strengths.append("Explicit warranty clauses give the buyer confidence against post-launch defects.")
+    else:
+        score -= 8
+        factors.append({
+            "name": "Risk Reversal & Assurance",
+            "score": 50,
+            "impact": "negative",
+            "description": "No explicit warranty period or bug-fix guarantee detected in proposal terms."
+        })
+        recommendations.append("Include a 60-to-90-day defect remediation warranty to close skeptical buyers.")
+
+    final_score = max(35, min(98, score))
+    win_prob = max(40, min(95, round(final_score * 0.95)))
+    grade = "Exceptional" if final_score >= 88 else "Strong" if final_score >= 75 else "Moderate" if final_score >= 60 else "At Risk"
+
+    return {
+        "success": True,
+        "data": {
+            "dealHealth": {
+                "winProbability": win_prob,
+                "overallHealthScore": final_score,
+                "grade": grade,
+                "factors": factors,
+                "strengths": strengths or ["Proposal presents structured technical specifications."],
+                "dealKillers": deal_killers,
+                "recommendations": recommendations or ["Keep proposal validity under 30 days to incentivize rapid client signature."],
+                "lastAnalyzedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            }
+        }
+    }
+
+
+def handle_scan_contract_risks(args: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    proposal = args.get("proposal", {})
+    sections = proposal.get("sections") or []
+    all_text = " ".join((s.get("title", "") + " " + s.get("content", "")) for s in sections)
+
+    risks = []
+
+    # 1. Scope Creep Risk
+    if not re.search(r"revision limit|\d+\s*revisions|change order", all_text, re.IGNORECASE):
+        risks.append({
+            "id": "risk_scope_creep",
+            "category": "Scope Creep",
+            "severity": "high",
+            "issue": "Undefined Revision Boundaries",
+            "riskExplanation": "Without a concrete cap on revision cycles, the client may request indefinite aesthetic and functional modifications without paying additional fees.",
+            "recommendation": "Specify that up to 2 review cycles are included per milestone, and additional changes require a formal billable Change Request.",
+            "autoFixClause": "### Scope Governance & Revision Policy\nDeliverables include up to two (2) consolidated feedback cycles per sprint milestone. Any modifications exceeding agreed specifications will be scoped via a formal Change Request at our standard billable rate ($125/hr).",
+            "injected": False,
+        })
+
+    # 2. Client Stalling Risk
+    if not re.search(r"within \d+ (?:business )?days|feedback window|deemed approved", all_text, re.IGNORECASE):
+        risks.append({
+            "id": "risk_client_stalling",
+            "category": "Timeline & Stalling",
+            "severity": "medium",
+            "issue": "Absence of Client Review Timeframe (Stalling Risk)",
+            "riskExplanation": "If the client delays feedback for weeks, your team remains blocked with allocated resources while timeline milestones drift.",
+            "recommendation": "Institute a 5-business-day review window after which milestone deliverables are deemed accepted.",
+            "autoFixClause": "### Client Acceptance Review Window\nClient agrees to review and provide consolidated feedback on submitted deliverables within five (5) business days. In the absence of written objections within this window, deliverables are deemed formally accepted to prevent sprint blockage.",
+            "injected": False,
+        })
+
+    # 3. IP Ownership Transfer Risk
+    if not re.search(r"full payment|receipt of final payment|upon settlement", all_text, re.IGNORECASE):
+        risks.append({
+            "id": "risk_ip_transfer",
+            "category": "IP & Ownership",
+            "severity": "high",
+            "issue": "Premature Intellectual Property Transfer",
+            "riskExplanation": "Transferring copyright or code ownership before receiving 100% of the project fee leaves you with zero legal leverage if the client defaults.",
+            "recommendation": "Explicitly state that intellectual property and licenses transfer solely upon receipt of cleared final payment.",
+            "autoFixClause": "### Intellectual Property & Transfer of Rights\nAll custom source code, documentation, and digital assets developed under this agreement remain the exclusive intellectual property of the agency until full and final settlement of all invoiced fees.",
+            "injected": False,
+        })
+
+    # 4. Third-Party Dependency Liability
+    if not re.search(r"third-party|external api|vendor downtime", all_text, re.IGNORECASE):
+        risks.append({
+            "id": "risk_third_party",
+            "category": "Liability & Warranties",
+            "severity": "low",
+            "issue": "Third-Party API & Cloud Service Liability Exposure",
+            "riskExplanation": "Client could attempt to hold your agency liable if OpenAI, AWS, Stripe, or Apple App Store experiences outages or policy shifts.",
+            "recommendation": "Include a standard third-party service dependency disclaimer.",
+            "autoFixClause": "### Third-Party Service Dependencies\nAgency is not liable for service outages, rate limits, breaking API updates, or billing changes initiated by third-party infrastructure providers (e.g., Cloudflare, AWS, OpenAI, Stripe).",
+            "injected": False,
+        })
+
+    high_count = sum(1 for r in risks if r["severity"] == "high")
+    med_count = sum(1 for r in risks if r["severity"] == "medium")
+    risk_index = min(100, high_count * 30 + med_count * 15 + len(risks) * 5)
+    overall_level = "high" if risk_index >= 50 else "moderate" if risk_index >= 25 else "low"
+
+    return {
+        "success": True,
+        "data": {
+            "riskReport": {
+                "overallRiskLevel": overall_level,
+                "riskIndex": risk_index,
+                "risks": risks,
+                "scannedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            }
+        }
+    }
+
+
+def handle_generate_discovery_questions(args: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    form_data = args.get("formData", {})
+    step1 = form_data.get("step1", {})
+    project_name = step1.get("projectName", "this project")
+
+    questions = [
+        {
+            "id": "dq_1",
+            "question": f"What are the primary KPIs or success metrics by which you will evaluate the success of {project_name}?",
+            "category": "business",
+            "importance": "critical",
+            "suggestedAnswers": [
+                "User adoption & active monthly user growth",
+                "Direct operational cost reduction / automation",
+                "Online conversion rate boost",
+                "Faster time-to-market than competitors",
+            ],
+        },
+        {
+            "id": "dq_2",
+            "question": "Do you have existing APIs, databases, or third-party platforms that must be integrated during Phase 1?",
+            "category": "technical",
+            "importance": "critical",
+            "suggestedAnswers": [
+                "Yes, existing REST/GraphQL APIs with available documentation",
+                "Yes, legacy database requiring schema migration",
+                "No, this is a greenfield build from scratch",
+                "Third-party CRM / Payment provider accounts only",
+            ],
+        },
+        {
+            "id": "dq_3",
+            "question": "Who on your internal team will be the designated single point of contact for sprint approvals?",
+            "category": "governance",
+            "importance": "critical",
+            "suggestedAnswers": [
+                "Dedicated Product Manager / CTO",
+                "Business Founder / CEO",
+                "Cross-functional committee (Marketing + Engineering)",
+            ],
+        },
+        {
+            "id": "dq_4",
+            "question": "What is your hard deadline or target launch date for live production deployment?",
+            "category": "timeline",
+            "importance": "helpful",
+            "suggestedAnswers": [
+                "Strict deadline tied to scheduled marketing campaign / investor demo",
+                "Flexible target within 6-8 weeks",
+                "Phased MVP launch followed by iterative quarterly releases",
+            ],
+        },
+        {
+            "id": "dq_5",
+            "question": "What compliance, data sovereignty, or security constraints apply to your user data?",
+            "category": "technical",
+            "importance": "helpful",
+            "suggestedAnswers": [
+                "Standard SSL / HTTPS and password hashing",
+                "Strict GDPR / CCPA data privacy compliance required",
+                "HIPAA / SOC2 Type II certification required",
+                "PCI-DSS compliance for payment card storage",
+            ],
+        },
+    ]
+
+    return {
+        "success": True,
+        "data": {
+            "questions": questions
+        }
+    }
+
+
 def invoke(method: str, args: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
     if method == "ping":
         return {"success": True, "data": {"pong": True}}
@@ -1077,6 +1367,12 @@ def invoke(method: str, args: dict[str, Any], context: dict[str, Any]) -> dict[s
         return handle_compare_versions(args, context)
     if method == "calculate_roi":
         return handle_calculate_roi(args, context)
+    if method == "analyze_deal_health":
+        return handle_analyze_deal_health(args, context)
+    if method == "scan_contract_risks":
+        return handle_scan_contract_risks(args, context)
+    if method == "generate_discovery_questions":
+        return handle_generate_discovery_questions(args, context)
     return {"success": False, "error": f"Unknown method: {method}"}
 
 

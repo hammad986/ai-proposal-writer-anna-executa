@@ -16,6 +16,7 @@ import {
   Trash2,
   LayoutGrid,
   List,
+  TrendingUp,
 } from 'lucide-react'
 import { AppShell } from '@/components/layout/app-shell'
 import { Button } from '@/components/ui/button'
@@ -445,10 +446,18 @@ export function DashboardView({
                           >
                             {proposal.title}
                           </button>
-                          <span className="text-[11px] text-muted-foreground truncate block">
-                            {proposal.formData?.step1?.projectType || 'Software Project'} ·{' '}
-                            {proposal.sections.length} sections
-                          </span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[11px] text-muted-foreground truncate">
+                              {proposal.formData?.step1?.projectType || 'Software Project'} ·{' '}
+                              {proposal.sections.length} sections
+                            </span>
+                            {proposal.dealHealth?.winProbability && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shrink-0">
+                                <TrendingUp className="h-2.5 w-2.5" />
+                                {proposal.dealHealth.winProbability}%
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-4">
                           <span className="font-medium text-foreground block">

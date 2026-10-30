@@ -2,8 +2,8 @@
   "name": "tool-hammad-ai-proposal-writer-anna-84jkbu68",
   "slug": "ai-proposal-writer-anna",
   "display_name": "AI Proposal Writer Tool",
-  "version": "0.3.0",
-  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, version comparison, ROI calculation, and LLM sampling.",
+  "version": "0.4.0",
+  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, version comparison, ROI calculation, deal health analysis, contract risk scan, and discovery questions.",
   "host_capabilities": ["llm.sample"],
   "tools": [
     {
@@ -140,6 +140,42 @@
           "type": "number",
           "description": "Client average hourly rate value.",
           "required": false
+        }
+      ]
+    },
+    {
+      "name": "analyze_deal_health",
+      "description": "Predictive AI deal health & win probability scoring analyzing scope, deposit security, and objection handling.",
+      "parameters": [
+        {
+          "name": "proposal",
+          "type": "object",
+          "description": "Complete proposal object to evaluate.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "scan_contract_risks",
+      "description": "AI legal and scope vulnerability scan detecting revision creep, stalling risks, and liability exposure.",
+      "parameters": [
+        {
+          "name": "proposal",
+          "type": "object",
+          "description": "Complete proposal object to scan.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "generate_discovery_questions",
+      "description": "Synthesize tailored project discovery intake questions to eliminate scoping assumptions.",
+      "parameters": [
+        {
+          "name": "formData",
+          "type": "object",
+          "description": "Proposal form data containing steps 1 to 4.",
+          "required": true
         }
       ]
     }

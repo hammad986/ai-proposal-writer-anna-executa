@@ -9,6 +9,13 @@ import type {
   ProposalSecurity,
   ProposalTemplate,
   RoiEstimation,
+  CurrencyCode,
+  PricingTier,
+  DealHealthAnalysis,
+  DealHealthFactor,
+  ContractRiskReport,
+  ContractRiskItem,
+  DiscoveryQuestion,
 } from './types'
 
 export const technicalRequirements = [
@@ -737,6 +744,310 @@ export function calculateDefaultRoi(totalBudget: number): RoiEstimation {
   }
 }
 
+export function createDefaultTieredPricing(budgetTotal: number, currency: CurrencyCode = 'USD'): PricingTier[] {
+  const base = Math.max(budgetTotal || 15000, 3000)
+  const starterPrice = Math.round((base * 0.6) / 100) * 100
+  const proPrice = base
+  const enterprisePrice = Math.round((base * 1.55) / 100) * 100
+
+  return [
+    {
+      id: 'tier_starter',
+      name: 'Starter MVP',
+      price: starterPrice,
+      description: 'Essential core features, rapid delivery, ideal for immediate validation.',
+      isPopular: false,
+      billingPeriod: 'one-time',
+      features: [
+        'Core functional MVP scope & deliverables',
+        'Standard responsive user experience',
+        'Standard QA & unit testing coverage',
+        '30-day post-launch warranty support',
+        'Standard deployment & hand-off documentation',
+      ],
+    },
+    {
+      id: 'tier_pro',
+      name: 'Growth & Professional',
+      price: proPrice,
+      description: 'Full recommended scope with priority SLA, analytics, and architecture excellence.',
+      isPopular: true,
+      billingPeriod: 'one-time',
+      features: [
+        'Everything in Starter MVP package',
+        'High-performance production architecture & APIs',
+        'Admin telemetry, analytics & reporting dashboard',
+        'Third-party automated webhook integrations',
+        '90-day extended hypercare warranty & priority SLA',
+        'Dedicated project management & weekly sprint reviews',
+      ],
+    },
+    {
+      id: 'tier_enterprise',
+      name: 'Enterprise Scale',
+      price: enterprisePrice,
+      description: 'Turnkey enterprise-grade delivery with SOC2 compliance, 180-day SLA, and team training.',
+      isPopular: false,
+      billingPeriod: 'one-time',
+      features: [
+        'Everything in Growth & Professional package',
+        'Custom high-availability multi-region cloud setup',
+        'SOC2 & GDPR compliance data architecture',
+        'Automated CI/CD deployment with zero-downtime rollback',
+        '180-day comprehensive SLA warranty & 24/7 incident response',
+        'Staff technical workshops & executive documentation',
+      ],
+    },
+  ]
+}
+
+export function createDefaultDealHealth(proposal: Partial<GeneratedProposal>): DealHealthAnalysis {
+  let score = 72
+  const factors: DealHealthFactor[] = []
+  const strengths: string[] = []
+  const dealKillers: string[] = []
+  const recommendations: string[] = []
+
+  const sectionsCount = proposal.sections?.length || 0
+  if (sectionsCount >= 6) {
+    score += 10
+    factors.push({
+      name: 'Scope & Section Completeness',
+      score: 92,
+      impact: 'positive',
+      description: `Includes ${sectionsCount} granular proposal sections covering scope, architecture, and governance.`,
+    })
+    strengths.push('Comprehensive section coverage establishes trust and professionalism.')
+  } else {
+    score -= 10
+    factors.push({
+      name: 'Scope & Section Completeness',
+      score: 55,
+      impact: 'negative',
+      description: `Proposal only contains ${sectionsCount} sections. Missing key commercial or technical details.`,
+    })
+    dealKillers.push('Sparse sections may cause client hesitation on technical capability.')
+    recommendations.push('Add Timeline & Phased Milestones and Terms & Warranties sections.')
+  }
+
+  const deposit = proposal.pricingStructure?.depositPercent ?? 40
+  if (deposit >= 40) {
+    score += 8
+    factors.push({
+      name: 'Payment & Cash Flow Protection',
+      score: 95,
+      impact: 'positive',
+      description: `${deposit}% advance kickoff deposit ensures healthy cashflow and client financial commitment.`,
+    })
+    strengths.push(`Strong commercial protection with a ${deposit}% advance payment requirement.`)
+  } else if (deposit < 30) {
+    score -= 12
+    factors.push({
+      name: 'Payment & Cash Flow Protection',
+      score: 45,
+      impact: 'negative',
+      description: `${deposit}% deposit creates excessive front-loaded financial risk for the agency.`,
+    })
+    dealKillers.push('Low upfront deposit exposes team to uncompensated preliminary sprint labor.')
+    recommendations.push('Increase upfront deposit to at least 40% before initiating sprint delivery.')
+  } else {
+    factors.push({
+      name: 'Payment & Cash Flow Protection',
+      score: 75,
+      impact: 'neutral',
+      description: `${deposit}% deposit provides standard payment security.`,
+    })
+  }
+
+  const hasWarranty = proposal.sections?.some((s) => /warrant|guarantee|sla/i.test(s.content + s.title))
+  if (hasWarranty) {
+    score += 8
+    factors.push({
+      name: 'Risk Reversal & Assurance',
+      score: 90,
+      impact: 'positive',
+      description: 'Formal post-launch warranty and SLA reverses client perceived delivery risk.',
+    })
+    strengths.push('Explicit warranty clauses give the buyer confidence against post-launch defects.')
+  } else {
+    score -= 8
+    factors.push({
+      name: 'Risk Reversal & Assurance',
+      score: 50,
+      impact: 'negative',
+      description: 'No explicit warranty period or bug-fix guarantee detected in proposal terms.',
+    })
+    recommendations.push('Include a 60-to-90-day defect remediation warranty to close skeptical buyers.')
+  }
+
+  const finalScore = Math.max(35, Math.min(98, score))
+  const winProbability = Math.max(40, Math.min(95, Math.round(finalScore * 0.95)))
+
+  let grade: DealHealthAnalysis['grade'] = 'Moderate'
+  if (finalScore >= 88) grade = 'Exceptional'
+  else if (finalScore >= 75) grade = 'Strong'
+  else if (finalScore < 60) grade = 'At Risk'
+
+  if (strengths.length === 0) {
+    strengths.push('Proposal presents structured technical specifications.')
+  }
+  if (recommendations.length === 0) {
+    recommendations.push('Keep proposal validity under 30 days to incentivize rapid client signature.')
+  }
+
+  return {
+    winProbability,
+    overallHealthScore: finalScore,
+    grade,
+    factors,
+    strengths,
+    dealKillers,
+    recommendations,
+    lastAnalyzedAt: new Date().toISOString(),
+  }
+}
+
+export function scanProposalContractRisks(proposal: GeneratedProposal): ContractRiskReport {
+  const risks: ContractRiskItem[] = []
+  const allText = (proposal.sections || []).map((s) => s.title + ' ' + s.content).join('\n')
+
+  // 1. Scope Creep Risk
+  const hasRevisionLimit = /revision limit|\d+\s*revisions|change order/i.test(allText)
+  if (!hasRevisionLimit) {
+    risks.push({
+      id: 'risk_scope_creep',
+      category: 'Scope Creep',
+      severity: 'high',
+      issue: 'Undefined Revision Boundaries',
+      riskExplanation: 'Without a concrete cap on revision cycles, the client may request indefinite aesthetic and functional modifications without paying additional fees.',
+      recommendation: 'Specify that up to 2 review cycles are included per milestone, and additional changes require a formal billable Change Request.',
+      autoFixClause: '### Scope Governance & Revision Policy\nDeliverables include up to two (2) consolidated feedback cycles per sprint milestone. Any modifications exceeding agreed specifications will be scoped via a formal Change Request at our standard billable rate ($125/hr).',
+      injected: false,
+    })
+  }
+
+  // 2. Client Stalling Risk
+  const hasClientSla = /within \d+ (?:business )?days|feedback window|deemed approved/i.test(allText)
+  if (!hasClientSla) {
+    risks.push({
+      id: 'risk_client_stalling',
+      category: 'Timeline & Stalling',
+      severity: 'medium',
+      issue: 'Absence of Client Review Timeframe (Stalling Risk)',
+      riskExplanation: 'If the client delays feedback for weeks, your team remains blocked with allocated resources while timeline milestones drift.',
+      recommendation: 'Institute a 5-business-day review window after which milestone deliverables are deemed accepted.',
+      autoFixClause: '### Client Acceptance Review Window\nClient agrees to review and provide consolidated feedback on submitted deliverables within five (5) business days. In the absence of written objections within this window, deliverables are deemed formally accepted to prevent sprint blockage.',
+      injected: false,
+    })
+  }
+
+  // 3. IP Ownership Transfer Risk
+  const hasIpTiming = /full payment|receipt of final payment|upon settlement/i.test(allText)
+  if (!hasIpTiming) {
+    risks.push({
+      id: 'risk_ip_transfer',
+      category: 'IP & Ownership',
+      severity: 'high',
+      issue: 'Premature Intellectual Property Transfer',
+      riskExplanation: 'Transferring copyright or code ownership before receiving 100% of the project fee leaves you with zero legal leverage if the client defaults.',
+      recommendation: 'Explicitly state that intellectual property and licenses transfer solely upon receipt of cleared final payment.',
+      autoFixClause: '### Intellectual Property & Transfer of Rights\nAll custom source code, documentation, and digital assets developed under this agreement remain the exclusive intellectual property of the agency until full and final settlement of all invoiced fees.',
+      injected: false,
+    })
+  }
+
+  // 4. Third-Party Dependency Liability
+  const hasThirdPartyDisclaimer = /third-party|external api|vendor downtime/i.test(allText)
+  if (!hasThirdPartyDisclaimer) {
+    risks.push({
+      id: 'risk_third_party',
+      category: 'Liability & Warranties',
+      severity: 'low',
+      issue: 'Third-Party API & Cloud Service Liability Exposure',
+      riskExplanation: 'Client could attempt to hold your agency liable if OpenAI, AWS, Stripe, or Apple App Store experiences outages or policy shifts.',
+      recommendation: 'Include a standard third-party service dependency disclaimer.',
+      autoFixClause: '### Third-Party Service Dependencies\nAgency is not liable for service outages, rate limits, breaking API updates, or billing changes initiated by third-party infrastructure providers (e.g., Cloudflare, AWS, OpenAI, Stripe).',
+      injected: false,
+    })
+  }
+
+  const highCount = risks.filter((r) => r.severity === 'high').length
+  const medCount = risks.filter((r) => r.severity === 'medium').length
+  const riskIndex = Math.min(100, highCount * 30 + medCount * 15 + risks.length * 5)
+  const overallRiskLevel: ContractRiskReport['overallRiskLevel'] =
+    riskIndex >= 50 ? 'high' : riskIndex >= 25 ? 'moderate' : 'low'
+
+  return {
+    overallRiskLevel,
+    riskIndex,
+    risks,
+    scannedAt: new Date().toISOString(),
+  }
+}
+
+export function generateDefaultDiscoveryQuestions(formData: ProposalFormData): DiscoveryQuestion[] {
+  return [
+    {
+      id: 'dq_1',
+      question: `What are the primary KPIs or success metrics by which you will evaluate the success of ${formData?.step1?.projectName || 'this project'}?`,
+      category: 'business',
+      importance: 'critical',
+      suggestedAnswers: [
+        'User adoption & active monthly user growth',
+        'Direct operational cost reduction / automation',
+        'Online conversion rate boost',
+        'Faster time-to-market than competitors',
+      ],
+    },
+    {
+      id: 'dq_2',
+      question: 'Do you have existing APIs, databases, or third-party platforms that must be integrated during Phase 1?',
+      category: 'technical',
+      importance: 'critical',
+      suggestedAnswers: [
+        'Yes, existing REST/GraphQL APIs with available documentation',
+        'Yes, legacy database requiring schema migration',
+        'No, this is a greenfield build from scratch',
+        'Third-party CRM / Payment provider accounts only',
+      ],
+    },
+    {
+      id: 'dq_3',
+      question: 'Who on your internal team will be the designated single point of contact for sprint approvals?',
+      category: 'governance',
+      importance: 'critical',
+      suggestedAnswers: [
+        'Dedicated Product Manager / CTO',
+        'Business Founder / CEO',
+        'Cross-functional committee (Marketing + Engineering)',
+      ],
+    },
+    {
+      id: 'dq_4',
+      question: 'What is your hard deadline or target launch date for live production deployment?',
+      category: 'timeline',
+      importance: 'helpful',
+      suggestedAnswers: [
+        'Strict deadline tied to scheduled marketing campaign / investor demo',
+        'Flexible target within 6-8 weeks',
+        'Phased MVP launch followed by iterative quarterly releases',
+      ],
+    },
+    {
+      id: 'dq_5',
+      question: 'What compliance, data sovereignty, or security constraints apply to your user data?',
+      category: 'technical',
+      importance: 'helpful',
+      suggestedAnswers: [
+        'Standard SSL / HTTPS and password hashing',
+        'Strict GDPR / CCPA data privacy compliance required',
+        'HIPAA / SOC2 Type II certification required',
+        'PCI-DSS compliance for payment card storage',
+      ],
+    },
+  ]
+}
+
 export function normalizeProposal(raw: any): GeneratedProposal {
   const today = new Date().toISOString().slice(0, 10)
   const defaultValid = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
@@ -818,7 +1129,18 @@ export function normalizeProposal(raw: any): GeneratedProposal {
     .filter((i) => !i.isOptional || i.isSelected)
     .reduce((sum, item) => sum + item.quantity * item.unitRate, 0) || 15000
 
-  return {
+  // Ensure tiered pricing exists
+  if (!pricingStructure.tiers || pricingStructure.tiers.length === 0) {
+    pricingStructure.tiers = createDefaultTieredPricing(numericBudget, pricingStructure.currency)
+  }
+  if (!pricingStructure.mode) {
+    pricingStructure.mode = 'itemized'
+  }
+  if (!pricingStructure.selectedTierId) {
+    pricingStructure.selectedTierId = 'tier_pro'
+  }
+
+  const baseProp: GeneratedProposal = {
     id: raw.id || `proposal_${Date.now()}`,
     formData,
     title: raw.title || `Project Proposal: ${formData.step1.projectName}`,
@@ -839,7 +1161,17 @@ export function normalizeProposal(raw: any): GeneratedProposal {
     analytics: raw.analytics || createDefaultAnalytics(),
     security: raw.security || createDefaultSecurity(),
     roiEstimation: raw.roiEstimation || calculateDefaultRoi(numericBudget),
+    comments: Array.isArray(raw.comments) ? raw.comments : [],
+    discoveryQuestions:
+      Array.isArray(raw.discoveryQuestions) && raw.discoveryQuestions.length > 0
+        ? raw.discoveryQuestions
+        : generateDefaultDiscoveryQuestions(formData),
   }
+
+  baseProp.dealHealth = raw.dealHealth || createDefaultDealHealth(baseProp)
+  baseProp.riskReport = raw.riskReport || scanProposalContractRisks(baseProp)
+
+  return baseProp
 }
 
 export const demoProposals: GeneratedProposal[] = [

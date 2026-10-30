@@ -33,7 +33,7 @@ export type ProposalStatus =
   | 'rejected'
   | 'archived'
 
-export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'INR' | 'CAD' | 'AUD'
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'INR' | 'CAD' | 'AUD' | 'AED' | 'SGD' | 'JPY'
 
 export interface PricingItem {
   id: string
@@ -46,6 +46,16 @@ export interface PricingItem {
   isSelected?: boolean // Selection state
 }
 
+export interface PricingTier {
+  id: string
+  name: string // e.g. "Starter / MVP", "Professional / Growth", "Enterprise / Scale"
+  price: number
+  description: string
+  isPopular?: boolean
+  features: string[]
+  billingPeriod?: 'one-time' | 'monthly' | 'milestone'
+}
+
 export interface PricingStructure {
   pricingModel: 'fixed' | 'hourly' | 'milestone' | 'retainer'
   currency: CurrencyCode
@@ -54,6 +64,9 @@ export interface PricingStructure {
   discountPercent: number
   paymentTerms: string
   depositPercent: number
+  mode?: 'itemized' | 'tiered'
+  tiers?: PricingTier[]
+  selectedTierId?: string
 }
 
 export interface QualityMetricBreakdown {
@@ -91,6 +104,18 @@ export interface ProposalVersionSnapshot {
   snapshot: GeneratedProposal
 }
 
+export interface DigitalSignature {
+  signatureType: 'draw' | 'type'
+  signatureDataUrl?: string // base64 PNG data url for drawn signature or SVG text
+  typedName?: string
+  certificateId: string // e.g. "CERT-ANNA-2026-98F4-A1BC"
+  signedAt: string // ISO timestamp
+  signerIpHash: string // SHA-like simulated hash e.g. "192.0.2.xx (Verified Session)"
+  signerUserAgent: string
+  signerEmail: string
+  signerTitle: string
+}
+
 export interface ClientSignoff {
   signerName: string
   signerEmail: string
@@ -98,6 +123,7 @@ export interface ClientSignoff {
   signedAt: string
   acceptedTotal: string
   notes?: string
+  digitalSignature?: DigitalSignature
 }
 
 export interface SectionEngagement {
@@ -245,6 +271,64 @@ export interface ProposalSection {
   isEdited: boolean
 }
 
+export interface DealHealthFactor {
+  name: string
+  score: number // 0-100
+  impact: 'positive' | 'negative' | 'neutral'
+  description: string
+}
+
+export interface DealHealthAnalysis {
+  winProbability: number // 0 - 100 percentage
+  overallHealthScore: number // 0 - 100
+  grade: 'Exceptional' | 'Strong' | 'Moderate' | 'At Risk'
+  factors: DealHealthFactor[]
+  strengths: string[]
+  dealKillers: string[]
+  recommendations: string[]
+  lastAnalyzedAt: string
+}
+
+export interface ContractRiskItem {
+  id: string
+  category: 'Scope Creep' | 'Cash Flow & Payment' | 'IP & Ownership' | 'Timeline & Stalling' | 'Liability & Warranties'
+  severity: 'high' | 'medium' | 'low'
+  issue: string
+  riskExplanation: string
+  recommendation: string
+  autoFixClause: string // Ready-to-inject protective legal snippet
+  injected?: boolean
+}
+
+export interface ContractRiskReport {
+  overallRiskLevel: 'low' | 'moderate' | 'high'
+  riskIndex: number // 0 - 100 (lower is safer)
+  risks: ContractRiskItem[]
+  scannedAt: string
+}
+
+export interface ProposalComment {
+  id: string
+  sectionId?: string
+  sectionTitle?: string
+  authorName: string
+  authorRole: 'client' | 'agency'
+  message: string
+  createdAt: string
+  resolved: boolean
+  reply?: string
+  repliedAt?: string
+}
+
+export interface DiscoveryQuestion {
+  id: string
+  question: string
+  category: 'technical' | 'business' | 'timeline' | 'governance'
+  importance: 'critical' | 'helpful' | 'optional'
+  suggestedAnswers?: string[]
+  clientAnswer?: string
+}
+
 export interface GeneratedProposal {
   id: string
   formData: ProposalFormData
@@ -266,4 +350,8 @@ export interface GeneratedProposal {
   analytics?: ProposalAnalytics
   security?: ProposalSecurity
   roiEstimation?: RoiEstimation
+  dealHealth?: DealHealthAnalysis
+  riskReport?: ContractRiskReport
+  comments?: ProposalComment[]
+  discoveryQuestions?: DiscoveryQuestion[]
 }

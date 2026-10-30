@@ -20,6 +20,11 @@ import {
   BookOpen,
   GitCompare,
   Globe,
+  TrendingUp,
+  ShieldAlert,
+  Presentation,
+  FileQuestion,
+  MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -33,6 +38,11 @@ import { AnalyticsDrawer } from '@/components/proposal/analytics-drawer'
 import { ContentLibraryModal } from '@/components/proposal/content-library-modal'
 import { VersionDiffModal } from '@/components/proposal/version-diff-modal'
 import { SecuritySettingsModal } from '@/components/proposal/security-settings-modal'
+import { DealHealthModal } from '@/components/proposal/deal-health-modal'
+import { RiskScannerModal } from '@/components/proposal/risk-scanner-modal'
+import { PitchDeckModal } from '@/components/proposal/pitch-deck-modal'
+import { DiscoveryQuestionsModal } from '@/components/proposal/discovery-questions-modal'
+import { ClientCommentsDrawer } from '@/components/proposal/client-comments-drawer'
 import { invokeExecutaTool } from '@/anna-bridge'
 import { generateProposalPdf } from '@/pdf-generator'
 import {
@@ -80,6 +90,11 @@ export function ProposalDetailView({
   const [showLibraryModal, setShowLibraryModal] = useState(false)
   const [showDiffModal, setShowDiffModal] = useState(false)
   const [showSecurityModal, setShowSecurityModal] = useState(false)
+  const [showDealHealthModal, setShowDealHealthModal] = useState(false)
+  const [showRiskScannerModal, setShowRiskScannerModal] = useState(false)
+  const [showPitchDeckModal, setShowPitchDeckModal] = useState(false)
+  const [showDiscoveryModal, setShowDiscoveryModal] = useState(false)
+  const [showCommentsDrawer, setShowCommentsDrawer] = useState(false)
   const [newSectionTitle, setNewSectionTitle] = useState('')
   const [newSectionType, setNewSectionType] = useState<ProposalSection['type']>('text')
 
@@ -290,6 +305,38 @@ export function ProposalDetailView({
               )}
             </Button>
 
+            {/* AI Deal Health & Win Rate */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowDealHealthModal(true)}
+              title="AI Deal Health & Win Predictor"
+            >
+              <TrendingUp className="h-4 w-4 text-emerald-500 mr-1.5" />
+              Win Rate
+              {proposal.dealHealth?.winProbability && (
+                <span className="ml-1.5 rounded-full bg-emerald-500/10 px-1.5 py-0.2 text-[10px] font-bold text-emerald-500">
+                  {proposal.dealHealth.winProbability}%
+                </span>
+              )}
+            </Button>
+
+            {/* AI Contract Risk Scanner */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowRiskScannerModal(true)}
+              title="AI Contract Red-Flag & Scope-Creep Scanner"
+            >
+              <ShieldAlert className="h-4 w-4 text-rose-500 mr-1.5" />
+              Risks
+              {proposal.riskReport?.risks && proposal.riskReport.risks.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-rose-500/10 px-1.5 py-0.2 text-[10px] font-bold text-rose-500">
+                  {proposal.riskReport.risks.length}
+                </span>
+              )}
+            </Button>
+
             {/* Client Presentation Mode */}
             <Button
               size="sm"
@@ -299,6 +346,44 @@ export function ProposalDetailView({
             >
               <Eye className="h-4 w-4 mr-1.5" />
               Client Preview
+            </Button>
+
+            {/* Fullscreen Pitch Slide Deck */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowPitchDeckModal(true)}
+              title="Fullscreen Slide Presentation Deck"
+            >
+              <Presentation className="h-4 w-4 mr-1.5 text-indigo-400" />
+              Pitch Deck
+            </Button>
+
+            {/* Discovery Intake Form */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowDiscoveryModal(true)}
+              title="AI Discovery & Intake Questionnaire"
+            >
+              <FileQuestion className="h-4 w-4 mr-1.5 text-blue-400" />
+              Intake
+            </Button>
+
+            {/* Client Feedback Q&A */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCommentsDrawer(true)}
+              title="Client Feedback & Q&A Hub"
+            >
+              <MessageSquare className="h-4 w-4 mr-1.5 text-cyan-400" />
+              Q&amp;A
+              {proposal.comments && proposal.comments.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-cyan-500/10 px-1.5 py-0.2 text-[10px] font-bold text-cyan-500">
+                  {proposal.comments.length}
+                </span>
+              )}
             </Button>
 
             {/* Version Snapshots */}
@@ -729,6 +814,55 @@ export function ProposalDetailView({
           toast.success('Security settings updated')
         }}
       />
+
+      {/* AI Deal Health Modal */}
+      {showDealHealthModal && (
+        <DealHealthModal
+          proposal={proposal}
+          onUpdateProposal={onUpdateProposal}
+          onClose={() => setShowDealHealthModal(false)}
+          toast={toast}
+        />
+      )}
+
+      {/* AI Contract Risk Scanner Modal */}
+      {showRiskScannerModal && (
+        <RiskScannerModal
+          proposal={proposal}
+          onUpdateProposal={onUpdateProposal}
+          onClose={() => setShowRiskScannerModal(false)}
+          toast={toast}
+        />
+      )}
+
+      {/* Fullscreen Pitch Slide Deck Modal */}
+      {showPitchDeckModal && (
+        <PitchDeckModal
+          proposal={proposal}
+          onClose={() => setShowPitchDeckModal(false)}
+          toast={toast}
+        />
+      )}
+
+      {/* AI Discovery Intake Questions Modal */}
+      {showDiscoveryModal && (
+        <DiscoveryQuestionsModal
+          proposal={proposal}
+          onUpdateProposal={onUpdateProposal}
+          onClose={() => setShowDiscoveryModal(false)}
+          toast={toast}
+        />
+      )}
+
+      {/* Client Feedback Q&A Drawer */}
+      {showCommentsDrawer && (
+        <ClientCommentsDrawer
+          proposal={proposal}
+          onUpdateProposal={onUpdateProposal}
+          onClose={() => setShowCommentsDrawer(false)}
+          toast={toast}
+        />
+      )}
     </div>
   )
 }

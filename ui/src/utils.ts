@@ -25,6 +25,9 @@ export function formatCurrency(value: number, currency: CurrencyCode = 'USD'): s
     INR: 'en-IN',
     CAD: 'en-CA',
     AUD: 'en-AU',
+    AED: 'en-AE',
+    SGD: 'en-SG',
+    JPY: 'ja-JP',
   }
 
   try {
@@ -147,7 +150,7 @@ export interface PricingTotals {
 }
 
 export function calculatePricingTotals(pricing?: PricingStructure): PricingTotals {
-  if (!pricing || !Array.isArray(pricing.items)) {
+  if (!pricing) {
     return {
       subtotal: 0,
       optionalTotal: 0,
@@ -164,16 +167,25 @@ export function calculatePricingTotals(pricing?: PricingStructure): PricingTotal
   let optionalTotal = 0
   let selectedTotal = 0
 
-  for (const item of pricing.items) {
-    const itemTotal = (item.quantity || 1) * (item.unitRate || 0)
-    if (item.isOptional) {
-      optionalTotal += itemTotal
-      if (item.isSelected) {
+  if (pricing.mode === 'tiered' && Array.isArray(pricing.tiers) && pricing.tiers.length > 0) {
+    const activeTier =
+      pricing.tiers.find((t) => t.id === pricing.selectedTierId) ||
+      pricing.tiers.find((t) => t.isPopular) ||
+      pricing.tiers[0]
+    subtotal = activeTier ? activeTier.price : 0
+    selectedTotal = subtotal
+  } else if (Array.isArray(pricing.items)) {
+    for (const item of pricing.items) {
+      const itemTotal = (item.quantity || 1) * (item.unitRate || 0)
+      if (item.isOptional) {
+        optionalTotal += itemTotal
+        if (item.isSelected) {
+          selectedTotal += itemTotal
+        }
+      } else {
+        subtotal += itemTotal
         selectedTotal += itemTotal
       }
-    } else {
-      subtotal += itemTotal
-      selectedTotal += itemTotal
     }
   }
 

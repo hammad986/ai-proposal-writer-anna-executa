@@ -3,7 +3,7 @@
   "required_executas": [
     {
       "tool_id": "tool-hammad-ai-proposal-writer-anna-84jkbu68",
-      "min_version": "0.3.0"
+      "min_version": "0.4.0"
     }
   ],
   "tags": ["ai-proposal-writer-anna"],

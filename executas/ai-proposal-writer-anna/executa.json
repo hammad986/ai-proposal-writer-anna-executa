@@ -1,9 +1,9 @@
 {
   "slug": "ai-proposal-writer-anna",
   "name": "AI Proposal Writer Tool",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "executa_type": "tool",
-  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, version comparison, ROI calculation, and LLM sampling.",
+  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, version comparison, ROI calculation, deal health analysis, contract risk scan, and discovery questions.",
   "tool_id": "ai-proposal-writer-anna",
   "type": "python",
   "manifest_file": "manifest.json",
@@ -20,12 +20,12 @@
         "executable_name": "ai-proposal-writer-anna",
         "binary_artifacts": {
           "linux-x86_64": {
-            "path": "dist/ai-proposal-writer-anna-0.3.0-linux-x86_64.tar.gz",
+            "path": "dist/ai-proposal-writer-anna-0.4.0-linux-x86_64.tar.gz",
             "entrypoint": "bin/ai-proposal-writer-anna",
             "format": "tar.gz"
           },
           "windows-x86_64": {
-            "path": "dist/ai-proposal-writer-anna-0.3.0-windows-x86_64.zip",
+            "path": "dist/ai-proposal-writer-anna-0.4.0-windows-x86_64.zip",
             "entrypoint": "bin/ai-proposal-writer-anna.exe",
             "format": "zip"
           }

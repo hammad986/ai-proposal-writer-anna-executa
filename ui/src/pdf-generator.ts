@@ -344,13 +344,19 @@ export function generateProposalPdf(
     // Digitally signed stamp
     doc.setTextColor(16, 185, 129)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.text(`[DIGITALLY SIGNED]`, clientBoxX + 4, cursorY + 14)
+    doc.setFontSize(8.5)
+    doc.text(`[VERIFIED DIGITAL SIGNATURE]`, clientBoxX + 4, cursorY + 13)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7.5)
     doc.setTextColor(55, 65, 81)
-    doc.text(`${proposal.signoff.signerName} (${proposal.signoff.signerTitle})`, clientBoxX + 4, cursorY + 21)
-    doc.text(`Signed: ${proposal.signoff.signedAt.slice(0, 10)} · Total: ${proposal.signoff.acceptedTotal}`, clientBoxX + 4, cursorY + 27)
+    doc.text(`${proposal.signoff.signerName} (${proposal.signoff.signerTitle})`, clientBoxX + 4, cursorY + 19)
+    doc.text(`Signed: ${proposal.signoff.signedAt.slice(0, 10)} · Total: ${proposal.signoff.acceptedTotal}`, clientBoxX + 4, cursorY + 24)
+    if (proposal.signoff.digitalSignature) {
+      doc.setFont('helvetica', 'italic')
+      doc.setFontSize(6.5)
+      doc.setTextColor(107, 114, 128)
+      doc.text(`Cert: ${proposal.signoff.digitalSignature.certificateId}`, clientBoxX + 4, cursorY + 29)
+    }
   } else {
     doc.line(clientBoxX + 4, cursorY + 18, clientBoxX + boxWidth - 4, cursorY + 18)
     doc.setFont('helvetica', 'normal')

@@ -13,6 +13,7 @@ import {
   XCircle,
   Archive,
   ArrowRight,
+  TrendingUp,
 } from 'lucide-react'
 import type { GeneratedProposal, ProposalStatus } from '../../types'
 import { formatCurrency, getDaysRemaining } from '../../utils'
@@ -195,6 +196,13 @@ export const PipelineBoard: React.FC<PipelineBoardProps> = ({
                             >
                               <ShieldCheck className="w-2.5 h-2.5" />
                               QA {qaScore}
+                            </span>
+                          )}
+
+                          {p.dealHealth?.winProbability !== undefined && (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium flex items-center gap-1">
+                              <TrendingUp className="w-2.5 h-2.5" />
+                              {p.dealHealth.winProbability}%
                             </span>
                           )}
 

@@ -15,6 +15,10 @@ import {
   TrendingUp,
   FileDown,
   Globe,
+  Presentation,
+  PenTool,
+  Layers,
+  Award,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -26,7 +30,11 @@ import {
   exportProposalAsMarkdown,
 } from '@/utils'
 import { generateProposalPdf } from '@/pdf-generator'
-import type { GeneratedProposal, PricingStructure } from '@/types'
+import { SignaturePadModal } from '@/components/proposal/signature-pad-modal'
+import { PitchDeckModal } from '@/components/proposal/pitch-deck-modal'
+import { ClientCommentsDrawer } from '@/components/proposal/client-comments-drawer'
+import { TieredPricingSelector } from '@/components/proposal/tiered-pricing-selector'
+import type { GeneratedProposal, PricingStructure, DigitalSignature } from '@/types'
 
 export function ClientPreviewModal({
   proposal,
@@ -52,9 +60,19 @@ export function ClientPreviewModal({
         discountPercent: 0,
         paymentTerms: '',
         depositPercent: 40,
+        mode: 'itemized',
       }
     )
   })
+
+  const [pricingDisplayMode, setPricingDisplayMode] = useState<'itemized' | 'tiered'>(
+    proposal.pricingStructure?.mode === 'tiered' ? 'tiered' : 'itemized'
+  )
+
+  // Modals state
+  const [showSignatureModal, setShowSignatureModal] = useState(false)
+  const [showPitchDeck, setShowPitchDeck] = useState(false)
+  const [showCommentsDrawer, setShowCommentsDrawer] = useState(false)
 
   // Signoff form state
   const [signerName, setSignerName] = useState(proposal.formData.step1.clientName || '')
@@ -101,7 +119,10 @@ export function ClientPreviewModal({
     }
   }, [])
 
-  const totals = calculatePricingTotals(activePricing)
+  const totals = calculatePricingTotals({
+    ...activePricing,
+    mode: pricingDisplayMode,
+  })
 
   const handleUnlockWithPasscode = () => {
     if (passcodeAttempt.trim() === proposal.security?.passcode?.trim()) {
@@ -114,6 +135,25 @@ export function ClientPreviewModal({
     }
   }
 
+  const handleSelectTier = (tierId: string) => {
+    const updatedPricing = {
+      ...activePricing,
+      mode: 'tiered' as const,
+      selectedTierId: tierId,
+    }
+    setActivePricing(updatedPricing)
+
+    const recalculated = calculatePricingTotals(updatedPricing)
+    const newTotalStr = formatCurrency(recalculated.grandTotal, updatedPricing.currency)
+    onUpdateProposal({
+      ...proposal,
+      pricingStructure: updatedPricing,
+      totalValue: newTotalStr,
+      updatedAt: new Date().toISOString(),
+    })
+    toast.success('Package selected!')
+  }
+
   const handleToggleOptionalItem = (itemId: string) => {
     const updatedItems = activePricing.items.map((it) =>
       it.id === itemId ? { ...it, isSelected: !it.isSelected } : it
@@ -121,6 +161,7 @@ export function ClientPreviewModal({
     const updatedPricing = {
       ...activePricing,
       items: updatedItems,
+      mode: 'itemized' as const,
     }
     setActivePricing(updatedPricing)
 
@@ -178,6 +219,56 @@ export function ClientPreviewModal({
     onUpdateProposal(updated)
     toast.success('Proposal successfully accepted and executed!')
     onClose()
+  }
+
+  const handleSaveDigitalSignature = (sig: DigitalSignature) => {
+    const grandTotalStr = formatCurrency(totals.grandTotal, activePricing.currency)
+    const nowIso = new Date().toISOString()
+
+    const signoffData = {
+      signerName: sig.typedName || sig.signerEmail,
+      signerEmail: sig.signerEmail,
+      signerTitle: sig.signerTitle,
+      signedAt: sig.signedAt,
+      acceptedTotal: grandTotalStr,
+      notes: `Cryptographically executed with digital signature: ${sig.certificateId}`,
+      digitalSignature: sig,
+    }
+
+    const newHistory = [
+      ...(proposal.statusHistory || []),
+      {
+        status: 'accepted' as const,
+        timestamp: nowIso,
+        note: `Proposal digitally signed and authorized by ${sig.typedName} (${sig.signerTitle}) [Certificate: ${sig.certificateId}]`,
+      },
+    ]
+
+    // Record Telemetry
+    const telemetryEvents = [
+      {
+        id: `evt_sign_${Date.now()}`,
+        eventType: 'signed' as const,
+        description: `E-Signature executed by ${sig.typedName} (${sig.certificateId})`,
+        timestamp: nowIso,
+        clientDevice: sig.signerUserAgent,
+      },
+      ...(proposal.analytics?.timelineEvents || []),
+    ]
+
+    const updated: GeneratedProposal = {
+      ...proposal,
+      status: 'accepted',
+      signoff: signoffData,
+      statusHistory: newHistory,
+      totalValue: grandTotalStr,
+      analytics: proposal.analytics
+        ? { ...proposal.analytics, timelineEvents: telemetryEvents }
+        : undefined,
+      updatedAt: nowIso,
+    }
+
+    onUpdateProposal(updated)
   }
 
   const handleRequestRevision = () => {
@@ -306,6 +397,8 @@ export function ClientPreviewModal({
     )
   }
 
+  const commentsCount = proposal.comments?.length || 0
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="relative w-full max-w-4xl rounded-xl border bg-background shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
@@ -322,6 +415,27 @@ export function ClientPreviewModal({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              size="sm"
+              variant="outline"
+              title="Fullscreen Slide Presentation Deck"
+              className="border-indigo-500/30 text-primary hover:bg-primary/10"
+              onClick={() => setShowPitchDeck(true)}
+            >
+              <Presentation className="h-3.5 w-3.5 mr-1" />
+              Slide Deck
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              title="Questions & Discussion Hub"
+              onClick={() => setShowCommentsDrawer(true)}
+            >
+              <MessageSquare className="h-3.5 w-3.5 mr-1" />
+              Q&amp;A {commentsCount > 0 && `(${commentsCount})`}
+            </Button>
+
             <Button
               size="sm"
               variant="outline"
@@ -496,102 +610,135 @@ export function ClientPreviewModal({
             </div>
           )}
 
-          {/* Interactive Pricing Section (Dynamic Add-on recalculation) */}
-          {activePricing.items.length > 0 && (
-            <div className="rounded-xl border bg-card p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-foreground">Itemized Investment &amp; Options</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Review deliverables. You can toggle optional add-ons to customize your scope.
-                  </p>
-                </div>
-                <span className="text-sm font-bold text-primary">
-                  {formatCurrency(totals.grandTotal, activePricing.currency)}
-                </span>
+          {/* Interactive Pricing Section (Toggle between Itemized and 3-Tier Packages) */}
+          <div className="rounded-xl border bg-card p-5 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-base font-bold text-foreground">Commercial Investment &amp; Packages</h3>
+                <p className="text-xs text-muted-foreground">
+                  Select package tier or configure deliverables to fit your target scope
+                </p>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="border-b bg-muted/40 uppercase text-muted-foreground">
-                    <tr>
-                      <th className="py-2.5 px-3">Deliverable Item</th>
-                      <th className="py-2.5 px-2 text-center">Qty</th>
-                      <th className="py-2.5 px-2 text-right">Rate</th>
-                      <th className="py-2.5 px-3 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {activePricing.items.map((it) => {
-                      const lineTotal = (it.quantity || 1) * (it.unitRate || 0)
-                      return (
-                        <tr key={it.id} className="hover:bg-muted/20">
-                          <td className="py-2.5 px-3">
-                            <div className="flex items-start gap-2">
-                              {it.isOptional && (
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(it.isSelected)}
-                                  onChange={() => handleToggleOptionalItem(it.id)}
-                                  className="mt-0.5 rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
-                                />
-                              )}
-                              <div>
-                                <span className="font-medium text-foreground">{it.title}</span>
-                                {it.isOptional && (
-                                  <span className="ml-2 rounded-full bg-indigo-50 dark:bg-indigo-950/50 px-1.5 py-0.2 text-[10px] text-primary font-semibold">
-                                    Optional Add-on
-                                  </span>
-                                )}
-                                {it.description && (
-                                  <p className="text-[11px] text-muted-foreground">{it.description}</p>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-2.5 px-2 text-center text-muted-foreground">
-                            {it.quantity}
-                          </td>
-                          <td className="py-2.5 px-2 text-right text-muted-foreground">
-                            {formatCurrency(it.unitRate, activePricing.currency)}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-semibold text-foreground">
-                            {formatCurrency(lineTotal, activePricing.currency)}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Total Calculation Strip */}
-              <div className="border-t pt-3 flex flex-col items-end gap-1 text-xs">
-                <div className="flex justify-between w-64 text-muted-foreground">
-                  <span>Selected Total:</span>
-                  <span>{formatCurrency(totals.selectedTotal, activePricing.currency)}</span>
-                </div>
-                {totals.discountAmount > 0 && (
-                  <div className="flex justify-between w-64 text-emerald-600">
-                    <span>Discount ({activePricing.discountPercent}%):</span>
-                    <span>-{formatCurrency(totals.discountAmount, activePricing.currency)}</span>
-                  </div>
-                )}
-                {totals.taxAmount > 0 && (
-                  <div className="flex justify-between w-64 text-muted-foreground">
-                    <span>Tax ({activePricing.taxPercent}%):</span>
-                    <span>+{formatCurrency(totals.taxAmount, activePricing.currency)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between w-64 text-sm font-bold text-foreground border-t pt-1.5">
-                  <span>Authorized Grand Total:</span>
-                  <span className="text-primary">
-                    {formatCurrency(totals.grandTotal, activePricing.currency)}
-                  </span>
-                </div>
+              <div className="flex items-center gap-1 p-1 bg-muted rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setPricingDisplayMode('itemized')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                    pricingDisplayMode === 'itemized'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Itemized Scope
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPricingDisplayMode('tiered')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                    pricingDisplayMode === 'tiered'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  3-Tier Packages
+                </button>
               </div>
             </div>
-          )}
+
+            {/* Mode A: 3-Tier Package Comparison */}
+            {pricingDisplayMode === 'tiered' && activePricing.tiers && activePricing.tiers.length > 0 ? (
+              <TieredPricingSelector
+                tiers={activePricing.tiers}
+                selectedTierId={activePricing.selectedTierId}
+                currency={activePricing.currency}
+                onSelectTier={handleSelectTier}
+              />
+            ) : (
+              /* Mode B: Itemized Deliverables Table */
+              <div className="space-y-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="border-b bg-muted/40 uppercase text-muted-foreground">
+                      <tr>
+                        <th className="py-2.5 px-3">Deliverable Item</th>
+                        <th className="py-2.5 px-2 text-center">Qty</th>
+                        <th className="py-2.5 px-2 text-right">Rate</th>
+                        <th className="py-2.5 px-3 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {activePricing.items.map((it) => {
+                        const lineTotal = (it.quantity || 1) * (it.unitRate || 0)
+                        return (
+                          <tr key={it.id} className="hover:bg-muted/20">
+                            <td className="py-2.5 px-3">
+                              <div className="flex items-start gap-2">
+                                {it.isOptional && (
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(it.isSelected)}
+                                    onChange={() => handleToggleOptionalItem(it.id)}
+                                    className="mt-0.5 rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                  />
+                                )}
+                                <div>
+                                  <span className="font-medium text-foreground">{it.title}</span>
+                                  {it.isOptional && (
+                                    <span className="ml-2 rounded-full bg-indigo-50 dark:bg-indigo-950/50 px-1.5 py-0.2 text-[10px] text-primary font-semibold">
+                                      Optional Add-on
+                                    </span>
+                                  )}
+                                  {it.description && (
+                                    <p className="text-[11px] text-muted-foreground">{it.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-2 text-center text-muted-foreground">
+                              {it.quantity}
+                            </td>
+                            <td className="py-2.5 px-2 text-right text-muted-foreground">
+                              {formatCurrency(it.unitRate, activePricing.currency)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-semibold text-foreground">
+                              {formatCurrency(lineTotal, activePricing.currency)}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Total Calculation Strip */}
+                <div className="border-t pt-3 flex flex-col items-end gap-1 text-xs">
+                  <div className="flex justify-between w-64 text-muted-foreground">
+                    <span>Selected Total:</span>
+                    <span>{formatCurrency(totals.selectedTotal, activePricing.currency)}</span>
+                  </div>
+                  {totals.discountAmount > 0 && (
+                    <div className="flex justify-between w-64 text-emerald-600">
+                      <span>Discount ({activePricing.discountPercent}%):</span>
+                      <span>-{formatCurrency(totals.discountAmount, activePricing.currency)}</span>
+                    </div>
+                  )}
+                  {totals.taxAmount > 0 && (
+                    <div className="flex justify-between w-64 text-muted-foreground">
+                      <span>Tax ({activePricing.taxPercent}%):</span>
+                      <span>+{formatCurrency(totals.taxAmount, activePricing.currency)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between w-64 text-sm font-bold text-foreground border-t pt-1.5">
+                    <span>Authorized Grand Total:</span>
+                    <span className="text-primary">
+                      {formatCurrency(totals.grandTotal, activePricing.currency)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Digital Acceptance / Revision Box */}
           <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-6 space-y-5">
@@ -602,16 +749,64 @@ export function ClientPreviewModal({
                   Authorization &amp; Digital Sign-Off
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Formalize project engagement by executing digital sign-off below.
+                  Formalize project engagement by executing verified digital sign-off below.
                 </p>
               </div>
 
               {proposal.signoff && (
-                <span className="flex items-center gap-1 text-xs font-bold text-emerald-600">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
                   <CheckCircle2 className="h-4 w-4" /> Signed on {proposal.signoff.signedAt.slice(0, 10)}
                 </span>
               )}
             </div>
+
+            {/* Display Verified Digital Signature if signed */}
+            {proposal.signoff?.digitalSignature && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-emerald-500" />
+                    <div>
+                      <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block">
+                        Verified Electronic Signature
+                      </span>
+                      <span className="text-xs text-muted-foreground font-mono">
+                        Certificate: {proposal.signoff.digitalSignature.certificateId}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    {proposal.signoff.digitalSignature.signedAt}
+                  </span>
+                </div>
+
+                {/* Signature Graphic */}
+                {proposal.signoff.digitalSignature.signatureDataUrl && (
+                  <div className="p-3 rounded-lg border bg-white dark:bg-zinc-900 max-w-sm">
+                    <img
+                      src={proposal.signoff.digitalSignature.signatureDataUrl}
+                      alt="Verified Signature"
+                      className="h-16 object-contain"
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs pt-1 border-t border-emerald-500/20 text-muted-foreground">
+                  <div>
+                    <span className="block text-[10px] uppercase">Signatory</span>
+                    <strong className="text-foreground">{proposal.signoff.signerName}</strong>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase">Title</span>
+                    <strong className="text-foreground">{proposal.signoff.signerTitle}</strong>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase">Authorized Total</span>
+                    <strong className="text-emerald-500">{proposal.signoff.acceptedTotal}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {!proposal.signoff && (
               <div className="space-y-4">
@@ -677,10 +872,21 @@ export function ClientPreviewModal({
                     Request scope or pricing revisions instead
                   </button>
 
-                  <Button onClick={handleAcceptProposal} disabled={!isConfirmed || !signerName.trim()}>
-                    <FileCheck className="h-4 w-4 mr-1.5" />
-                    Accept &amp; Authorize Proposal
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => setShowSignatureModal(true)}
+                    >
+                      <PenTool className="h-4 w-4 text-primary" />
+                      Sign with E-Signature Pad
+                    </Button>
+
+                    <Button onClick={handleAcceptProposal} disabled={!isConfirmed || !signerName.trim()}>
+                      <FileCheck className="h-4 w-4 mr-1.5" />
+                      Accept &amp; Authorize Proposal
+                    </Button>
+                  </div>
                 </div>
 
                 {showRevisionForm && (
@@ -708,6 +914,36 @@ export function ClientPreviewModal({
           </div>
         </div>
       </div>
+
+      {/* Sub-Modals */}
+      {showSignatureModal && (
+        <SignaturePadModal
+          initialSignerName={signerName}
+          initialSignerEmail={signerEmail}
+          initialSignerTitle={signerTitle}
+          onSaveSignature={handleSaveDigitalSignature}
+          onClose={() => setShowSignatureModal(false)}
+          toast={toast}
+        />
+      )}
+
+      {showPitchDeck && (
+        <PitchDeckModal
+          proposal={proposal}
+          onClose={() => setShowPitchDeck(false)}
+          toast={toast}
+        />
+      )}
+
+      {showCommentsDrawer && (
+        <ClientCommentsDrawer
+          proposal={proposal}
+          onUpdateProposal={onUpdateProposal}
+          onClose={() => setShowCommentsDrawer(false)}
+          toast={toast}
+        />
+      )}
     </div>
   )
 }
+
