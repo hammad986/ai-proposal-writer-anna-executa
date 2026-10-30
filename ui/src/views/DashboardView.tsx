@@ -17,6 +17,8 @@ import {
   LayoutGrid,
   List,
   TrendingUp,
+  Upload,
+  FileCode,
 } from 'lucide-react'
 import { AppShell } from '@/components/layout/app-shell'
 import { Button } from '@/components/ui/button'
@@ -28,7 +30,7 @@ import { TemplatePickerModal } from '@/components/proposal/template-picker'
 import { PipelineBoard } from '@/components/proposal/pipeline-board'
 import { generateProposalPdf } from '@/pdf-generator'
 import type { BrandConfig, GeneratedProposal, ProposalStatus, ProposalTemplate } from '@/types'
-import { currencyToNumber, formatCurrency, uid } from '@/utils'
+import { currencyToNumber, formatCurrency, uid, downloadFile } from '@/utils'
 
 type FilterTab = 'all' | 'draft' | 'review' | 'sent' | 'accepted' | 'rejected' | 'archived'
 type SortOrder = 'date-desc' | 'date-asc' | 'value-desc' | 'value-asc' | 'client-asc'
@@ -181,6 +183,50 @@ export function DashboardView({
     toast.success('Proposal duplicated as draft')
   }
 
+  const handleExportJson = (proposal: GeneratedProposal) => {
+    try {
+      const jsonStr = JSON.stringify(proposal, null, 2)
+      downloadFile(
+        jsonStr,
+        `${proposal.title.replace(/[^a-zA-Z0-9]/g, '_')}_backup.json`,
+        'application/json'
+      )
+      toast.success('Proposal exported as JSON')
+    } catch {
+      toast.error('Failed to export JSON')
+    }
+  }
+
+  const handleImportJson = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const parsed = JSON.parse(e.target?.result as string) as GeneratedProposal
+        if (!parsed.id || !parsed.title || !Array.isArray(parsed.sections)) {
+          toast.error('Invalid proposal JSON schema')
+          return
+        }
+        const nowIso = new Date().toISOString()
+        const imported: GeneratedProposal = {
+          ...parsed,
+          id: uid('proposal'),
+          title: `${parsed.title} (Imported)`,
+          status: 'draft',
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        }
+        onUpdateProposal(imported)
+        toast.success(`Imported "${imported.title}" successfully!`)
+      } catch {
+        toast.error('Could not parse JSON file')
+      }
+    }
+    reader.readAsText(file)
+    event.target.value = ''
+  }
+
   const handleToggleArchive = (proposal: GeneratedProposal) => {
     const newStatus: ProposalStatus = proposal.status === 'archived' ? 'draft' : 'archived'
     const nowIso = new Date().toISOString()
@@ -217,15 +263,29 @@ export function DashboardView({
       onNewProposal={() => onNavigate('new')}
       onOpenBrandSettings={() => setShowBrandModal(true)}
       extraActions={
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setShowTemplateModal(true)}
-          title="Browse Proposal Templates"
-        >
-          <Layers className="h-4 w-4 mr-1.5 text-primary" />
-          <span className="hidden sm:inline">Templates</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleImportJson}
+            />
+            <span className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-2xs hover:bg-muted transition">
+              <Upload className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+              <span className="hidden sm:inline">Import JSON</span>
+            </span>
+          </label>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowTemplateModal(true)}
+            title="Browse Proposal Templates"
+          >
+            <Layers className="h-4 w-4 mr-1.5 text-primary" />
+            <span className="hidden sm:inline">Templates</span>
+          </Button>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -512,6 +572,14 @@ export function DashboardView({
                               onClick={() => handleDownloadPdf(proposal)}
                             >
                               <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              title="Export Proposal JSON Backup"
+                              onClick={() => handleExportJson(proposal)}
+                            >
+                              <FileCode className="h-4 w-4 text-purple-400" />
                             </Button>
                             <Button
                               size="icon"

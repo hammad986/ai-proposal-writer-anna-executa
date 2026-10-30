@@ -25,6 +25,8 @@ import {
   Presentation,
   FileQuestion,
   MessageSquare,
+  Mail,
+  Calculator,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -43,6 +45,9 @@ import { RiskScannerModal } from '@/components/proposal/risk-scanner-modal'
 import { PitchDeckModal } from '@/components/proposal/pitch-deck-modal'
 import { DiscoveryQuestionsModal } from '@/components/proposal/discovery-questions-modal'
 import { ClientCommentsDrawer } from '@/components/proposal/client-comments-drawer'
+import { RoiCalculatorModal } from '@/components/proposal/roi-calculator-modal'
+import { FollowUpCadenceModal } from '@/components/proposal/followup-cadence-modal'
+import { CurrencyConverterModal } from '@/components/proposal/currency-converter-modal'
 import { invokeExecutaTool } from '@/anna-bridge'
 import { generateProposalPdf } from '@/pdf-generator'
 import {
@@ -95,6 +100,9 @@ export function ProposalDetailView({
   const [showPitchDeckModal, setShowPitchDeckModal] = useState(false)
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false)
   const [showCommentsDrawer, setShowCommentsDrawer] = useState(false)
+  const [showRoiModal, setShowRoiModal] = useState(false)
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false)
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false)
   const [newSectionTitle, setNewSectionTitle] = useState('')
   const [newSectionType, setNewSectionType] = useState<ProposalSection['type']>('text')
 
@@ -335,6 +343,39 @@ export function ProposalDetailView({
                   {proposal.riskReport.risks.length}
                 </span>
               )}
+            </Button>
+
+            {/* Client ROI & Financial Impact Calculator */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowRoiModal(true)}
+              title="Interactive Client ROI & Business Value Calculator"
+            >
+              <Calculator className="h-4 w-4 text-emerald-400 mr-1.5" />
+              ROI Calc
+            </Button>
+
+            {/* AI Sales Follow-Up Cadence */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowFollowUpModal(true)}
+              title="AI Sales Follow-Up Cadence & Pitch Sequences"
+            >
+              <Mail className="h-4 w-4 text-blue-400 mr-1.5" />
+              Follow-Up
+            </Button>
+
+            {/* Multi-Currency Live FX Converter */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCurrencyModal(true)}
+              title="Multi-Currency Live FX Converter & Dual-Quote"
+            >
+              <Globe className="h-4 w-4 text-purple-400 mr-1.5" />
+              Multi-Currency
             </Button>
 
             {/* Client Presentation Mode */}
@@ -860,6 +901,38 @@ export function ProposalDetailView({
           proposal={proposal}
           onUpdateProposal={onUpdateProposal}
           onClose={() => setShowCommentsDrawer(false)}
+          toast={toast}
+        />
+      )}
+
+      {/* Interactive ROI & Business Value Calculator Modal */}
+      {showRoiModal && (
+        <RoiCalculatorModal
+          isOpen={showRoiModal}
+          onClose={() => setShowRoiModal(false)}
+          proposal={proposal}
+          onUpdateProposal={onUpdateProposal}
+          toast={toast}
+        />
+      )}
+
+      {/* AI Sales Follow-Up Cadence & Outreach Modal */}
+      {showFollowUpModal && (
+        <FollowUpCadenceModal
+          isOpen={showFollowUpModal}
+          onClose={() => setShowFollowUpModal(false)}
+          proposal={proposal}
+          toast={toast}
+        />
+      )}
+
+      {/* Multi-Currency Live FX Converter Modal */}
+      {showCurrencyModal && (
+        <CurrencyConverterModal
+          isOpen={showCurrencyModal}
+          onClose={() => setShowCurrencyModal(false)}
+          proposal={proposal}
+          onUpdateProposal={onUpdateProposal}
           toast={toast}
         />
       )}
