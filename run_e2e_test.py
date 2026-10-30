@@ -120,6 +120,75 @@ print(f"Regenerated Section Title: {new_sec.get('title')}")
 print(f"Regenerated Section Length: {len(new_sec.get('content', ''))} chars")
 assert new_sec.get('title') == 'Scope of Work'
 
+# 4b. Tool call: audit_proposal (v0.2.0)
+print('\n--- Step 4b: Tools Invoke (audit_proposal v0.2.0) ---')
+call_audit = {
+    'session_id': session_id,
+    'ns': 'tools',
+    'method': 'invoke',
+    'args': {
+        'tool_id': 'tool-hammad-ai-proposal-writer-anna-84jkbu68',
+        'method': 'audit_proposal',
+        'args': {'proposal': proposal}
+    }
+}
+resp_audit = post_json('/api/session/call', call_audit)
+res_audit = resp_audit.get('result', {})
+audit_data = res_audit.get('audit') or res_audit.get('data', {}).get('audit', {})
+print(f"Quality Score: {audit_data.get('overallScore')}/100")
+print(f"Audit Summary: {audit_data.get('summary')}")
+assert audit_data.get('overallScore') is not None, 'Expected overallScore in audit'
+print('audit_proposal test: PASSED')
+
+# 4c. Tool call: refine_text (v0.2.0)
+print('\n--- Step 4c: Tools Invoke (refine_text v0.2.0) ---')
+call_refine = {
+    'session_id': session_id,
+    'ns': 'tools',
+    'method': 'invoke',
+    'args': {
+        'tool_id': 'tool-hammad-ai-proposal-writer-anna-84jkbu68',
+        'method': 'refine_text',
+        'args': {
+            'text': 'We build good software that works fast.',
+            'instruction': 'improve_tone',
+            'context': 'Production AI Proposal Platform'
+        }
+    }
+}
+resp_refine = post_json('/api/session/call', call_refine)
+res_refine = resp_refine.get('result', {})
+refined_text = res_refine.get('refinedText') or res_refine.get('data', {}).get('refinedText', '')
+print(f"Refined Text: {refined_text}")
+assert len(refined_text) > 0, 'Expected non-empty refined text'
+print('refine_text test: PASSED')
+
+# 4d. Tool call: extract_brief (v0.2.0)
+print('\n--- Step 4d: Tools Invoke (extract_brief v0.2.0) ---')
+brief_input = (
+    "Hi, I am Sarah Jenkins from Acme Retail Ltd (sarah@acmeretail.com). "
+    "We need an automated inventory forecasting dashboard to solve our stockouts. "
+    "Key features needed: real-time alerts, ERP sync, and executive reporting. "
+    "Our budget is around $25,000 and we want to launch in 8 weeks."
+)
+call_extract = {
+    'session_id': session_id,
+    'ns': 'tools',
+    'method': 'invoke',
+    'args': {
+        'tool_id': 'tool-hammad-ai-proposal-writer-anna-84jkbu68',
+        'method': 'extract_brief',
+        'args': {'briefText': brief_input}
+    }
+}
+resp_extract = post_json('/api/session/call', call_extract)
+res_extract = resp_extract.get('result', {})
+extracted = res_extract.get('extracted') or res_extract.get('data', {}).get('extracted', {})
+print(f"Extracted Client: {extracted.get('clientName')} at {extracted.get('clientCompany')}")
+print(f"Extracted Budget: {extracted.get('budgetRange')}")
+assert 'Sarah Jenkins' in extracted.get('clientName', ''), 'Failed to extract client name'
+print('extract_brief test: PASSED')
+
 # 5. Host API: Storage
 print('\n--- Step 5: Host API Storage (set/get) ---')
 call_set = {

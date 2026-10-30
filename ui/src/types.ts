@@ -5,6 +5,11 @@ export type ProjectType =
   | 'Automation'
   | 'Full-Stack App'
   | 'Custom Software'
+  | 'IT Consulting & Advisory'
+  | 'Digital Marketing & Growth'
+  | 'UI/UX Product Design'
+  | 'Cloud Architecture & DevOps'
+  | 'API & Integration'
 
 export type Industry =
   | 'E-commerce'
@@ -13,7 +18,116 @@ export type Industry =
   | 'Fintech'
   | 'SaaS'
   | 'Real Estate'
+  | 'Technology'
+  | 'Finance & Banking'
+  | 'Media & Entertainment'
+  | 'Manufacturing & Logistics'
+  | 'Professional Services'
   | 'Other'
+
+export type ProposalStatus =
+  | 'draft'
+  | 'review'
+  | 'sent'
+  | 'accepted'
+  | 'rejected'
+  | 'archived'
+
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'INR' | 'CAD' | 'AUD'
+
+export interface PricingItem {
+  id: string
+  title: string
+  description?: string
+  category: 'development' | 'design' | 'management' | 'infrastructure' | 'consulting' | 'other'
+  quantity: number
+  unitRate: number
+  isOptional?: boolean // Can be toggled by client in presentation mode
+  isSelected?: boolean // Selection state
+}
+
+export interface PricingStructure {
+  pricingModel: 'fixed' | 'hourly' | 'milestone' | 'retainer'
+  currency: CurrencyCode
+  items: PricingItem[]
+  taxPercent: number
+  discountPercent: number
+  paymentTerms: string
+  depositPercent: number
+}
+
+export interface QualityMetricBreakdown {
+  completeness: number // 0 - 100
+  clarity: number // 0 - 100
+  pricingIntegrity: number // 0 - 100
+  scopeSpecificity: number // 0 - 100
+  riskCoverage: number // 0 - 100
+  actionability: number // 0 - 100
+}
+
+export interface QualityAuditResult {
+  overallScore: number // 0 - 100
+  grade: 'A' | 'B' | 'C' | 'Needs Improvement'
+  metrics: QualityMetricBreakdown
+  strengths: string[]
+  actionableRecommendations: string[]
+  missingCriticalItems: string[]
+  lastAuditedAt: string
+}
+
+export interface StatusHistoryEntry {
+  status: ProposalStatus
+  timestamp: string
+  note?: string
+}
+
+export interface ProposalVersionSnapshot {
+  id: string
+  versionNumber: string
+  createdAt: string
+  note: string
+  sectionsCount: number
+  totalValue: string
+  snapshot: GeneratedProposal
+}
+
+export interface ClientSignoff {
+  signerName: string
+  signerEmail: string
+  signerTitle: string
+  signedAt: string
+  acceptedTotal: string
+  notes?: string
+}
+
+export interface BrandConfig {
+  companyName: string
+  tagline: string
+  logoUrl?: string
+  primaryColor: string
+  accentColor: string
+  email: string
+  phone?: string
+  website?: string
+  address?: string
+  defaultCurrency: CurrencyCode
+  defaultPaymentTerms: string
+}
+
+export interface ProposalTemplate {
+  id: string
+  name: string
+  category: string
+  description: string
+  iconName: string
+  projectType: ProjectType
+  industry: Industry
+  sections: string[]
+  sampleProblem: string
+  sampleFeatures: string[]
+  samplePricing: PricingItem[]
+  defaultTone: 'professional' | 'friendly' | 'bold' | 'technical'
+}
 
 export interface FormStep1 {
   agencyName: string
@@ -44,6 +158,7 @@ export interface FormStep3 {
   warrantyPeriod: string
   additionalServices: string[]
   paymentMilestone: '50-50' | '40-30-30' | '30-40-30'
+  pricingStructure?: PricingStructure
 }
 
 export interface FormStep4 {
@@ -85,8 +200,14 @@ export interface GeneratedProposal {
   generatedDate: string
   validUntil: string
   sections: ProposalSection[]
-  status: 'draft' | 'sent' | 'accepted' | 'rejected'
+  status: ProposalStatus
   totalValue: string
   createdAt: string
   updatedAt: string
+  pricingStructure?: PricingStructure
+  qualityAudit?: QualityAuditResult
+  statusHistory?: StatusHistoryEntry[]
+  versions?: ProposalVersionSnapshot[]
+  signoff?: ClientSignoff
+  brandConfig?: Partial<BrandConfig>
 }

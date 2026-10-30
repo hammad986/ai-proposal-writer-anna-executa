@@ -19,8 +19,8 @@ from typing import Any
 
 MANIFEST = {
     "display_name": "AI Proposal Writer Tool",
-    "version": "0.1.3",
-    "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, and LLM sampling.",
+    "version": "0.2.0",
+    "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, and LLM sampling.",
     "host_capabilities": ["llm.sample"],
     "tools": [
         {
@@ -68,6 +68,54 @@ MANIFEST = {
                     "description": "Specific user instructions for how to rewrite the section.",
                     "required": False,
                 },
+            ],
+        },
+        {
+            "name": "audit_proposal",
+            "description": "Conduct a comprehensive AI Quality Assurance audit of a proposal, scoring completeness, pricing math, risk coverage, and clarity.",
+            "parameters": [
+                {
+                    "name": "proposal",
+                    "type": "object",
+                    "description": "Complete proposal object to evaluate.",
+                    "required": True,
+                }
+            ],
+        },
+        {
+            "name": "refine_text",
+            "description": "Refine or rewrite proposal text with a specific instruction (improve tone, make concise, expand technical details, simplify, add risks).",
+            "parameters": [
+                {
+                    "name": "text",
+                    "type": "string",
+                    "description": "Original text to refine.",
+                    "required": True,
+                },
+                {
+                    "name": "instruction",
+                    "type": "string",
+                    "description": "Instruction: 'improve_tone' | 'make_concise' | 'expand_details' | 'simplify' | 'add_risks'.",
+                    "required": True,
+                },
+                {
+                    "name": "context",
+                    "type": "string",
+                    "description": "Optional context such as proposal title or client company.",
+                    "required": False,
+                },
+            ],
+        },
+        {
+            "name": "extract_brief",
+            "description": "Extract structured proposal fields (client, project, problem, features, budget) from unstructured client RFP or brief text.",
+            "parameters": [
+                {
+                    "name": "briefText",
+                    "type": "string",
+                    "description": "Raw project brief, email, or RFP text.",
+                    "required": True,
+                }
             ],
         },
     ],
@@ -595,6 +643,320 @@ def handle_regenerate_section(args: dict[str, Any], context: dict[str, Any]) -> 
     return {"success": True, "data": {"section": new_section}}
 
 
+def synthesize_fallback_audit(proposal: dict[str, Any]) -> dict[str, Any]:
+    sections = proposal.get("sections") or []
+    sec_titles = [s.get("title", "").lower() for s in sections]
+    total_words = sum(len(s.get("content", "").split()) for s in sections)
+
+    has_exec = any("executive" in t or "summary" in t for t in sec_titles)
+    has_scope = any("scope" in t or "deliverable" in t or "feature" in t for t in sec_titles)
+    has_tech = any("technical" in t or "approach" in t or "architecture" in t for t in sec_titles)
+    has_timeline = any("timeline" in t or "milestone" in t or "schedule" in t for t in sec_titles)
+    has_pricing = any("pricing" in t or "investment" in t or "commercial" in t for t in sec_titles)
+    has_terms = any("term" in t or "condition" in t or "legal" in t for t in sec_titles)
+
+    # Completeness (0-100)
+    completeness_pts = (has_exec * 15) + (has_scope * 20) + (has_tech * 15) + (has_timeline * 20) + (has_pricing * 20) + (has_terms * 10)
+    completeness = min(100, max(40, completeness_pts))
+
+    # Clarity (0-100)
+    clarity = 85 if total_words > 600 else (70 if total_words > 300 else 55)
+
+    # Scope Specificity (0-100)
+    bullet_count = sum(s.get("content", "").count("- ") + s.get("content", "").count("* ") for s in sections)
+    scope_specificity = min(98, max(50, 60 + bullet_count * 3))
+
+    # Pricing Integrity (0-100)
+    has_table = any("|" in s.get("content", "") for s in sections)
+    pricing_integrity = 92 if (has_pricing and has_table) else (78 if has_pricing else 45)
+
+    # Risk Coverage (0-100)
+    has_risks = any("risk" in s.get("content", "").lower() or "mitigation" in s.get("content", "").lower() or "warranty" in s.get("content", "").lower() for s in sections)
+    risk_coverage = 88 if has_risks else 62
+
+    # Actionability (0-100)
+    has_next_steps = any("next" in t or "step" in t or "action" in t or "kickoff" in t for t in sec_titles)
+    actionability = 94 if has_next_steps else 68
+
+    # Weighted Overall Score
+    overall_score = int(
+        (completeness * 0.25)
+        + (clarity * 0.15)
+        + (scope_specificity * 0.20)
+        + (pricing_integrity * 0.20)
+        + (risk_coverage * 0.10)
+        + (actionability * 0.10)
+    )
+
+    grade = "A" if overall_score >= 88 else ("B" if overall_score >= 75 else ("C" if overall_score >= 60 else "Needs Improvement"))
+
+    strengths = []
+    if has_scope and bullet_count >= 4:
+        strengths.append("Granular scope of work with itemized deliverable breakdown.")
+    if has_timeline:
+        strengths.append("Clear phased project milestones providing structured delivery visibility.")
+    if pricing_integrity >= 80:
+        strengths.append("Structured investment schedule with explicit milestone payment terms.")
+    if has_exec:
+        strengths.append("Personalized executive summary establishing client problem alignment.")
+    if not strengths:
+        strengths.append("Foundational proposal structure established.")
+
+    recommendations = []
+    missing_items = []
+    if not has_terms:
+        recommendations.append("Include explicit Terms & Conditions covering IP transfer, warranty period, and revision bounds.")
+        missing_items.append("Terms & Conditions")
+    if not has_table and has_pricing:
+        recommendations.append("Convert pricing text into an itemized tabular format for transparent client review.")
+    if not has_risks:
+        recommendations.append("Add a Risk Mitigation & Dependency section to build client trust and demonstrate foresight.")
+        missing_items.append("Risk Mitigation Matrix")
+    if not has_next_steps:
+        recommendations.append("Add an unambiguous Next Steps section outlining contract signature and kickoff scheduling.")
+        missing_items.append("Next Steps / Call to Action")
+    if total_words < 500:
+        recommendations.append("Elaborate on technical implementation specifics to strengthen competitive value.")
+
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    return {
+        "overallScore": overall_score,
+        "grade": grade,
+        "metrics": {
+            "completeness": completeness,
+            "clarity": clarity,
+            "pricingIntegrity": pricing_integrity,
+            "scopeSpecificity": scope_specificity,
+            "riskCoverage": risk_coverage,
+            "actionability": actionability,
+        },
+        "strengths": strengths,
+        "actionableRecommendations": recommendations,
+        "missingCriticalItems": missing_items,
+        "lastAuditedAt": now_iso,
+    }
+
+
+def synthesize_fallback_refine(text: str, instruction: str, context_info: str) -> str:
+    cleaned = text.strip()
+    norm_inst = instruction.lower()
+
+    if "tone" in norm_inst or "professional" in norm_inst:
+        prefix = f"### Professional Advisory Framing\n\n"
+        enhanced = cleaned.replace("we will make", "our dedicated team will engineer and deliver")
+        enhanced = enhanced.replace("good", "enterprise-grade").replace("fast", "high-velocity and robust")
+        return prefix + enhanced + "\n\n*All specifications adhere strictly to modern engineering standards and client-approved governance.*"
+
+    elif "concise" in norm_inst or "short" in norm_inst:
+        paragraphs = [p.strip() for p in cleaned.split("\n\n") if p.strip()]
+        condensed = []
+        for p in paragraphs:
+            sentences = [s.strip() for s in p.split(". ") if s.strip()]
+            if sentences:
+                condensed.append(". ".join(sentences[:2]) + ("." if not sentences[0].endswith(".") else ""))
+        return "\n\n".join(condensed) if condensed else cleaned
+
+    elif "expand" in norm_inst or "technical" in norm_inst or "detail" in norm_inst:
+        suffix = (
+            "\n\n### Technical Execution & Quality Standards\n"
+            "- **Architecture**: Modular separation of concerns with clean API contracts.\n"
+            "- **Resilience**: Comprehensive error boundaries, input sanitization, and automated retry policies.\n"
+            "- **Validation**: Continuous automated unit testing and end-to-end regression validation prior to deployment."
+        )
+        return cleaned + suffix
+
+    elif "simplify" in norm_inst or "plain" in norm_inst:
+        simplified = cleaned.replace("orchestration", "organization").replace("utilize", "use")
+        simplified = simplified.replace("enterprise-grade", "reliable and proven").replace("paradigm", "approach")
+        return simplified
+
+    elif "risk" in norm_inst or "mitigation" in norm_inst:
+        risks_block = (
+            "\n\n### Risk Management & Contingency Plan\n"
+            "| Identified Risk | Severity | Mitigation Strategy |\n"
+            "|---|---|---|\n"
+            "| Third-Party API Latency / Changes | Medium | Mock fallback layer & strict SLA monitoring |\n"
+            "| Scope Drift during Sprints | High | Formal Change Request procedure & weekly scope audits |\n"
+            "| Data Schema Migration Bottlenecks | Low | Phased database migrations with automated rollback |"
+        )
+        return cleaned + risks_block
+
+    return cleaned
+
+
+def synthesize_fallback_extract_brief(brief_text: str) -> dict[str, Any]:
+    text = brief_text.strip()
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+
+    # Heuristic extraction
+    client_name = "Client Partner"
+    client_company = "Client Organization"
+    project_name = "Custom Solution"
+    project_type = "Web Development"
+    industry = "Technology"
+    budget = "Standard Project Budget"
+
+    # Search for client / company
+    company_match = re.search(r"(?:company|organization|client|at)\s+([A-Za-z0-9 &]+?)(?:\.|\n|!|\s+we|\s+our|$)", text, re.I)
+    if not company_match:
+        company_match = re.search(r"(?:from)\s+([A-Za-z0-9 &]+?)(?:\.|\n|!|\s+we|\s+our|$)", text, re.I)
+    if company_match:
+        client_company = company_match.group(1).strip()
+
+    name_match = re.search(r"(?:this is|i am|my name is|contact:?|name:?)\s+(?:dr\.?|mr\.?|ms\.?|mrs\.?)?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", text, re.I)
+    if not name_match:
+        name_match = re.search(r"(?:from|hi|hello)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:at|from|with)", text, re.I)
+    if name_match:
+        client_name = name_match.group(1).strip()
+
+    # Search for project name
+    proj_match = re.search(r"(?:project|building|develop|create|build)\s+(?:a|an|the|our)?\s*([A-Za-z0-9 &'-]+?)(?:\.|\n|!|\s+in|\s+for|$)", text, re.I)
+    if proj_match:
+        project_name = proj_match.group(1).strip()
+    elif lines:
+        project_name = lines[0][:40]
+
+    # Search for budget
+    budget_match = re.search(r"(\$|₹|€|£)\s?([0-9,]+(?:\s?-\s?[0-9,]+|\s?k)?)", text, re.I)
+    if budget_match:
+        budget = budget_match.group(0).strip()
+
+    # Extract bullet points as features
+    raw_features = [l.lstrip("-*• 0123456789.)").strip() for l in lines if l.startswith(("-", "*", "•")) or re.match(r"^\d+\.", l)]
+    if not raw_features:
+        raw_features = [lines[i] for i in range(min(3, len(lines)))]
+
+    return {
+        "clientName": client_name,
+        "clientCompany": client_company,
+        "projectName": project_name,
+        "projectType": project_type,
+        "industry": industry,
+        "problemStatement": text[:350],
+        "keyFeatures": "\n".join(raw_features[:6]),
+        "budgetRange": budget,
+        "timeline": "4-6 weeks",
+    }
+
+
+def handle_audit_proposal(args: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    proposal = args.get("proposal")
+    if not isinstance(proposal, dict):
+        return {"success": False, "error": "proposal dictionary is required."}
+
+    invoke_id = context.get("invoke_id")
+    sampling_token = context.get("sampling_token")
+
+    audit_result = None
+    if sampling_token:
+        try:
+            prompt = (
+                f"You are a Senior Proposal Auditor and Commercial Contracts Reviewer.\n"
+                f"Audit the following project proposal and output a structured QA assessment in JSON.\n\n"
+                f"PROPOSAL DATA:\n{json.dumps(proposal)[:3000]}\n\n"
+                f"Evaluate across: completeness, clarity, pricingIntegrity, scopeSpecificity, riskCoverage, actionability.\n"
+                f"RESPOND WITH A VALID JSON OBJECT ONLY:\n"
+                f"{{\n"
+                f'  "overallScore": 88,\n'
+                f'  "grade": "A",\n'
+                f'  "metrics": {{\n'
+                f'    "completeness": 90,\n'
+                f'    "clarity": 85,\n'
+                f'    "pricingIntegrity": 90,\n'
+                f'    "scopeSpecificity": 85,\n'
+                f'    "riskCoverage": 80,\n'
+                f'    "actionability": 90\n'
+                f'  }},\n'
+                f'  "strengths": ["...", "..."],\n'
+                f'  "actionableRecommendations": ["...", "..."],\n'
+                f'  "missingCriticalItems": ["..."],\n'
+                f'  "lastAuditedAt": "{datetime.datetime.now(datetime.timezone.utc).isoformat()}"\n'
+                f"}}"
+            )
+            raw = sample_llm(prompt, invoke_id=invoke_id, timeout_s=30.0)
+            audit_result = parse_json_response(raw)
+        except Exception:
+            audit_result = None
+
+    if not audit_result or not isinstance(audit_result.get("metrics"), dict):
+        audit_result = synthesize_fallback_audit(proposal)
+
+    return {"success": True, "data": {"audit": audit_result}}
+
+
+def handle_refine_text(args: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    text = args.get("text", "")
+    instruction = args.get("instruction", "improve_tone")
+    context_info = args.get("context", "")
+
+    if not text:
+        return {"success": False, "error": "text string is required."}
+
+    invoke_id = context.get("invoke_id")
+    sampling_token = context.get("sampling_token")
+
+    refined = None
+    if sampling_token:
+        try:
+            prompt = (
+                f"You are an expert agency proposal editor.\n"
+                f"Context: {context_info}\n"
+                f"Instruction: {instruction}\n"
+                f"Original text:\n{text}\n\n"
+                f"Rewrite and refine the text according to the instruction. Preserve Markdown formatting.\n"
+                f"RESPOND WITH A VALID JSON OBJECT ONLY: {{\"refinedText\": \"...\"}}"
+            )
+            raw = sample_llm(prompt, invoke_id=invoke_id, timeout_s=25.0)
+            parsed = parse_json_response(raw)
+            refined = parsed.get("refinedText")
+        except Exception:
+            refined = None
+
+    if not refined:
+        refined = synthesize_fallback_refine(text, instruction, context_info)
+
+    return {"success": True, "data": {"refinedText": refined}}
+
+
+def handle_extract_brief(args: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    brief_text = args.get("briefText", "")
+    if not brief_text:
+        return {"success": False, "error": "briefText string is required."}
+
+    invoke_id = context.get("invoke_id")
+    sampling_token = context.get("sampling_token")
+
+    extracted = None
+    if sampling_token:
+        try:
+            prompt = (
+                f"Extract structured proposal scoping fields from this raw client brief / RFP:\n\n"
+                f"{brief_text}\n\n"
+                f"RESPOND WITH A VALID JSON OBJECT ONLY:\n"
+                f"{{\n"
+                f'  "clientName": "...",\n'
+                f'  "clientCompany": "...",\n'
+                f'  "projectName": "...",\n'
+                f'  "projectType": "Web Development",\n'
+                f'  "industry": "Technology",\n'
+                f'  "problemStatement": "...",\n'
+                f'  "keyFeatures": "1. ...\\n2. ...",\n'
+                f'  "budgetRange": "...",\n'
+                f'  "timeline": "..."\n'
+                f"}}"
+            )
+            raw = sample_llm(prompt, invoke_id=invoke_id, timeout_s=30.0)
+            extracted = parse_json_response(raw)
+        except Exception:
+            extracted = None
+
+    if not extracted or not isinstance(extracted, dict):
+        extracted = synthesize_fallback_extract_brief(brief_text)
+
+    return {"success": True, "data": {"extractedData": extracted}}
+
+
 def invoke(method: str, args: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
     if method == "ping":
         return {"success": True, "data": {"pong": True}}
@@ -602,6 +964,12 @@ def invoke(method: str, args: dict[str, Any], context: dict[str, Any]) -> dict[s
         return handle_generate_proposal(args, context)
     if method == "regenerate_section":
         return handle_regenerate_section(args, context)
+    if method == "audit_proposal":
+        return handle_audit_proposal(args, context)
+    if method == "refine_text":
+        return handle_refine_text(args, context)
+    if method == "extract_brief":
+        return handle_extract_brief(args, context)
     return {"success": False, "error": f"Unknown method: {method}"}
 
 
@@ -615,7 +983,7 @@ def main() -> None:
             print(json.dumps({"status": "ready"}))
             sys.exit(0)
         if arg in ("--version", "version", "-v"):
-            print(MANIFEST.get("version", "0.1.3"))
+            print(MANIFEST.get("version", "0.2.0"))
             sys.exit(0)
 
     # Start stdin listener thread
@@ -641,11 +1009,11 @@ def main() -> None:
                     "protocolVersion": "2.0",
                     "server_info": {
                         "name": MANIFEST.get("display_name", "AI Proposal Writer Tool"),
-                        "version": MANIFEST.get("version", "0.1.3"),
+                        "version": MANIFEST.get("version", "0.2.0"),
                     },
                     "serverInfo": {
                         "name": MANIFEST.get("display_name", "AI Proposal Writer Tool"),
-                        "version": MANIFEST.get("version", "0.1.3"),
+                        "version": MANIFEST.get("version", "0.2.0"),
                     },
                     "capabilities": {"sampling": {}},
                 }

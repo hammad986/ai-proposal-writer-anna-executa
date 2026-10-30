@@ -6,14 +6,16 @@ import {
   storageSet,
   setWindowTitle,
 } from './anna-bridge'
-import { demoProposals, emptyFormData } from './defaults'
-import type { GeneratedProposal, ProposalFormData } from './types'
+import { defaultBrandConfig, demoProposals, emptyFormData, normalizeProposal } from './defaults'
+import type { BrandConfig, GeneratedProposal, ProposalFormData, ProposalTemplate } from './types'
+import { calculatePricingTotals, formatCurrency } from './utils'
 import { DashboardView } from './views/DashboardView'
 import { NewProposalView } from './views/NewProposalView'
 import { ProposalDetailView } from './views/ProposalDetailView'
 
 const STORAGE_PROPOSALS_KEY = 'ai-proposal-writer:proposals'
 const STORAGE_DRAFT_KEY = 'ai-proposal-writer:form_draft'
+const STORAGE_BRAND_KEY = 'ai-proposal-writer:brand_config'
 
 interface ToastMessage {
   id: string
@@ -24,6 +26,7 @@ interface ToastMessage {
 export function App() {
   const [proposals, setProposals] = useState<GeneratedProposal[]>([])
   const [formDraft, setFormDraft] = useState<Partial<ProposalFormData>>(emptyFormData)
+  const [brandConfig, setBrandConfig] = useState<BrandConfig>(defaultBrandConfig)
   const [currentRoute, setCurrentRoute] = useState<'dashboard' | 'new' | 'detail'>('dashboard')
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -74,12 +77,15 @@ export function App() {
     async function load() {
       await initAnnaBridge()
 
-      // Fetch saved proposals from Anna Storage (with demo fallback)
-      const savedProposals = await storageGet<GeneratedProposal[]>(
+      // Fetch saved proposals from Anna Storage (normalized with demo fallback)
+      const rawProposals = await storageGet<any[]>(
         STORAGE_PROPOSALS_KEY,
         demoProposals
       )
-      setProposals(savedProposals)
+      const normalizedProposals = (Array.isArray(rawProposals) ? rawProposals : demoProposals).map(
+        normalizeProposal
+      )
+      setProposals(normalizedProposals)
 
       // Fetch saved draft
       const savedDraft = await storageGet<Partial<ProposalFormData>>(
@@ -88,8 +94,15 @@ export function App() {
       )
       setFormDraft(savedDraft)
 
+      // Fetch brand config
+      const savedBrand = await storageGet<BrandConfig>(
+        STORAGE_BRAND_KEY,
+        defaultBrandConfig
+      )
+      setBrandConfig(savedBrand || defaultBrandConfig)
+
       // Route based on current hash
-      applyHashRoute(window.location.hash, savedProposals)
+      applyHashRoute(window.location.hash, normalizedProposals)
       setIsLoaded(true)
     }
 
@@ -131,8 +144,9 @@ export function App() {
   // Save new proposal
   const handleProposalGenerated = useCallback(
     (newProposal: GeneratedProposal) => {
+      const normalized = normalizeProposal(newProposal)
       setProposals((prev) => {
-        const next = [newProposal, ...prev.filter((p) => p.id !== newProposal.id)]
+        const next = [normalized, ...prev.filter((p) => p.id !== normalized.id)]
         storageSet(STORAGE_PROPOSALS_KEY, next)
         return next
       })
@@ -143,10 +157,11 @@ export function App() {
     []
   )
 
-  // Update proposal (e.g. after edit or regenerate)
+  // Update proposal (e.g. after edit, status change, or regenerate)
   const handleUpdateProposal = useCallback((updated: GeneratedProposal) => {
+    const normalized = normalizeProposal(updated)
     setProposals((prev) => {
-      const next = prev.map((p) => (p.id === updated.id ? updated : p))
+      const next = prev.map((p) => (p.id === normalized.id ? normalized : p))
       storageSet(STORAGE_PROPOSALS_KEY, next)
       return next
     })
@@ -160,6 +175,62 @@ export function App() {
       return next
     })
   }, [])
+
+  // Update Brand Config
+  const handleUpdateBrandConfig = useCallback((updated: BrandConfig) => {
+    setBrandConfig(updated)
+    storageSet(STORAGE_BRAND_KEY, updated)
+  }, [])
+
+  // Start Proposal from Template
+  const handleCreateProposalFromTemplate = useCallback(
+    (template: ProposalTemplate) => {
+      const defaultPricing = {
+        pricingModel: 'fixed' as const,
+        currency: brandConfig.defaultCurrency || ('USD' as const),
+        items: template.samplePricing,
+        taxPercent: 0,
+        discountPercent: 0,
+        paymentTerms: brandConfig.defaultPaymentTerms || '40% advance upon signing, 30% milestone review, 30% handover.',
+        depositPercent: 40,
+      }
+      const totals = calculatePricingTotals(defaultPricing)
+      const formattedTotal = formatCurrency(totals.grandTotal, defaultPricing.currency)
+
+      const draft: ProposalFormData = {
+        step1: {
+          ...emptyFormData.step1,
+          agencyName: brandConfig.companyName || emptyFormData.step1.agencyName,
+          agencyTagline: brandConfig.tagline || emptyFormData.step1.agencyTagline,
+          agencyEmail: brandConfig.email || emptyFormData.step1.agencyEmail,
+          agencyWebsite: brandConfig.website || emptyFormData.step1.agencyWebsite,
+          projectName: template.name,
+          projectType: template.projectType,
+          industry: template.industry,
+          problemStatement: template.sampleProblem,
+        },
+        step2: {
+          ...emptyFormData.step2,
+          keyFeatures: template.sampleFeatures.join('\n'),
+        },
+        step3: {
+          ...emptyFormData.step3,
+          pricingStructure: defaultPricing,
+          budgetRange: formattedTotal,
+        },
+        step4: {
+          ...emptyFormData.step4,
+          tone: template.defaultTone,
+          includedSections: template.sections,
+        },
+      }
+
+      setFormDraft(draft)
+      storageSet(STORAGE_DRAFT_KEY, draft)
+      navigate('new')
+    },
+    [brandConfig, navigate]
+  )
 
   // Draft persistence
   const handleSaveDraft = useCallback((draft: ProposalFormData) => {
@@ -198,8 +269,12 @@ export function App() {
       {currentRoute === 'dashboard' && (
         <DashboardView
           proposals={proposals}
+          brandConfig={brandConfig}
+          onUpdateBrandConfig={handleUpdateBrandConfig}
           onNavigate={navigate}
           onDeleteProposal={handleDeleteProposal}
+          onUpdateProposal={handleUpdateProposal}
+          onCreateProposalFromTemplate={handleCreateProposalFromTemplate}
           toast={toast}
         />
       )}
@@ -226,15 +301,15 @@ export function App() {
         ) : (
           <div className="flex min-h-screen items-center justify-center bg-background px-4">
             <div className="text-center space-y-4">
-              <h2 className="text-xl font-semibold">Proposal Not Found</h2>
+              <h2 className="text-xl font-bold">Proposal Not Found</h2>
               <p className="text-sm text-muted-foreground">
-                This proposal may have been deleted or does not exist.
+                This proposal may have been deleted or does not exist in your workspace.
               </p>
               <button
                 onClick={() => navigate('dashboard')}
-                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-600"
+                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600 cursor-pointer"
               >
-                Return to Proposals
+                Return to Proposals Workspace
               </button>
             </div>
           </div>

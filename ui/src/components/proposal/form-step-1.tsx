@@ -93,6 +93,11 @@ export function FormStep1View({
               'Automation',
               'Full-Stack App',
               'Custom Software',
+              'IT Consulting & Advisory',
+              'Digital Marketing & Growth',
+              'UI/UX Product Design',
+              'Cloud Architecture & DevOps',
+              'API & Integration',
             ].map((item) => (
               <option key={item}>{item}</option>
             ))}
@@ -106,7 +111,20 @@ export function FormStep1View({
           value={data.industry}
           onChange={(event) => onChange({ industry: event.target.value as FormStep1['industry'] })}
         >
-          {['E-commerce', 'Healthcare', 'Education', 'Fintech', 'SaaS', 'Real Estate', 'Other'].map((item) => (
+          {[
+            'Technology',
+            'E-commerce',
+            'Healthcare',
+            'Education',
+            'Fintech',
+            'SaaS',
+            'Real Estate',
+            'Finance & Banking',
+            'Media & Entertainment',
+            'Manufacturing & Logistics',
+            'Professional Services',
+            'Other',
+          ].map((item) => (
             <option key={item}>{item}</option>
           ))}
         </Select>

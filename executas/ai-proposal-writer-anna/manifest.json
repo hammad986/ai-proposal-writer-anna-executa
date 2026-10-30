@@ -2,8 +2,8 @@
   "name": "tool-hammad-ai-proposal-writer-anna-84jkbu68",
   "slug": "ai-proposal-writer-anna",
   "display_name": "AI Proposal Writer Tool",
-  "version": "0.1.3",
-  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, and LLM sampling.",
+  "version": "0.2.0",
+  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, and LLM sampling.",
   "host_capabilities": ["llm.sample"],
   "tools": [
     {
@@ -50,6 +50,54 @@
           "type": "string",
           "description": "Specific user instructions for how to rewrite the section.",
           "required": false
+        }
+      ]
+    },
+    {
+      "name": "audit_proposal",
+      "description": "Conduct a comprehensive AI Quality Assurance audit of a proposal, scoring completeness, pricing math, risk coverage, and clarity.",
+      "parameters": [
+        {
+          "name": "proposal",
+          "type": "object",
+          "description": "Complete proposal object to evaluate.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "refine_text",
+      "description": "Refine or rewrite proposal text with a specific instruction (improve tone, make concise, expand technical details, simplify, add risks).",
+      "parameters": [
+        {
+          "name": "text",
+          "type": "string",
+          "description": "Original text to refine.",
+          "required": true
+        },
+        {
+          "name": "instruction",
+          "type": "string",
+          "description": "Instruction: 'improve_tone' | 'make_concise' | 'expand_details' | 'simplify' | 'add_risks'.",
+          "required": true
+        },
+        {
+          "name": "context",
+          "type": "string",
+          "description": "Optional context such as proposal title or client company.",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "extract_brief",
+      "description": "Extract structured proposal fields (client, project, problem, features, budget) from unstructured client RFP or brief text.",
+      "parameters": [
+        {
+          "name": "briefText",
+          "type": "string",
+          "description": "Raw project brief, email, or RFP text.",
+          "required": true
         }
       ]
     }

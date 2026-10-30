@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Sparkles, Wand2, LayoutTemplate } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FormStep1View } from '@/components/proposal/form-step-1'
@@ -8,10 +8,12 @@ import { FormStep3View } from '@/components/proposal/form-step-3'
 import { FormStep4View } from '@/components/proposal/form-step-4'
 import { GeneratingView } from '@/components/proposal/generating-view'
 import { StepIndicator } from '@/components/proposal/step-indicator'
+import { BriefImporterModal } from '@/components/proposal/brief-importer-modal'
+import { TemplatePickerModal } from '@/components/proposal/template-picker'
 import { invokeExecutaTool } from '@/anna-bridge'
-import { emptyFormData } from '@/defaults'
-import { formatLocalDate, addDaysToIso } from '@/utils'
-import type { GeneratedProposal, ProposalFormData } from '@/types'
+import { emptyFormData, normalizeProposal } from '@/defaults'
+import { formatLocalDate, addDaysToIso, calculatePricingTotals, formatCurrency } from '@/utils'
+import type { GeneratedProposal, ProposalFormData, ProposalTemplate } from '@/types'
 
 function mergeDraft(draft?: Partial<ProposalFormData>): ProposalFormData {
   return {
@@ -28,8 +30,8 @@ function validateStep(step: number, data: ProposalFormData): Record<string, stri
     if (!data.step1.agencyName.trim()) errors.agencyName = 'Agency name is required.'
     if (!data.step1.clientName.trim()) errors.clientName = 'Client contact name is required.'
     if (!data.step1.projectName.trim()) errors.projectName = 'Project name is required.'
-    if (data.step1.problemStatement.trim().length < 50) {
-      errors.problemStatement = 'Please provide at least 50 characters describing the problem.'
+    if (data.step1.problemStatement.trim().length < 30) {
+      errors.problemStatement = 'Please provide at least 30 characters describing the problem.'
     }
   }
   if (step === 2) {
@@ -63,9 +65,16 @@ export function NewProposalView({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
+  const [showBriefImporter, setShowBriefImporter] = useState(false)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const lastSubmitted = useRef<ProposalFormData | null>(null)
 
-  const stepTitles = ['Project Basics', 'Scope & Requirements', 'Pricing & Timeline', 'Tone & Style']
+  const stepTitles = [
+    'Project & Client Scope',
+    'Deliverables & Technology',
+    'Quotation & Timeline',
+    'Tone & Proposal Sections',
+  ]
   const title = useMemo(() => stepTitles[currentStep - 1], [currentStep])
 
   const patchStep = <T extends keyof ProposalFormData>(step: T, patch: Partial<ProposalFormData[T]>) => {
@@ -81,6 +90,67 @@ export function NewProposalView({
       return updated
     })
     setErrors({})
+  }
+
+  const handleApplyTemplate = (tpl: ProposalTemplate) => {
+    const defaultPricing = {
+      pricingModel: 'fixed' as const,
+      currency: 'USD' as const,
+      items: tpl.samplePricing,
+      taxPercent: 0,
+      discountPercent: 0,
+      paymentTerms: '40% advance upon contract signing, 30% milestone review, 30% upon final acceptance handover.',
+      depositPercent: 40,
+    }
+    const totals = calculatePricingTotals(defaultPricing)
+    const formattedTotal = formatCurrency(totals.grandTotal, 'USD')
+
+    setFormData((prev) => {
+      const updated: ProposalFormData = {
+        ...prev,
+        step1: {
+          ...prev.step1,
+          projectName: tpl.name,
+          projectType: tpl.projectType,
+          industry: tpl.industry,
+          problemStatement: tpl.sampleProblem,
+        },
+        step2: {
+          ...prev.step2,
+          keyFeatures: tpl.sampleFeatures.join('\n'),
+        },
+        step3: {
+          ...prev.step3,
+          pricingStructure: defaultPricing,
+          budgetRange: formattedTotal,
+        },
+        step4: {
+          ...prev.step4,
+          tone: tpl.defaultTone,
+          includedSections: tpl.sections,
+        },
+      }
+      onSaveDraft(updated)
+      return updated
+    })
+    toast.success(`Template applied: ${tpl.name}`)
+  }
+
+  const handleApplyBriefExtraction = (extracted: {
+    step1Patch: any
+    step2Patch: any
+    step3Patch: any
+  }) => {
+    setFormData((prev) => {
+      const updated: ProposalFormData = {
+        ...prev,
+        step1: { ...prev.step1, ...extracted.step1Patch },
+        step2: { ...prev.step2, ...extracted.step2Patch },
+        step3: { ...prev.step3, ...extracted.step3Patch },
+      }
+      onSaveDraft(updated)
+      return updated
+    })
   }
 
   const handleNext = () => {
@@ -114,11 +184,11 @@ export function NewProposalView({
         throw new Error('Executa did not return a valid proposal structure.')
       }
 
-      let proposal = response.proposal
+      let proposal = normalizeProposal(response.proposal)
       const todayStr = formatLocalDate(new Date())
       const defaultValidUntil = addDaysToIso(todayStr, 30)
 
-      // Defense-in-depth: Ensure generatedDate is valid and current, and validUntil reflects the 30-day window
+      // Defense-in-depth date validity
       if (
         !proposal.generatedDate ||
         proposal.generatedDate < todayStr ||
@@ -140,9 +210,15 @@ export function NewProposalView({
         }
       }
 
-      // Keep minimum smooth generation animation time (approx 3.5s)
+      // Preserve pricing structure from form if available
+      if (data.step3.pricingStructure) {
+        const totals = calculatePricingTotals(data.step3.pricingStructure)
+        proposal.pricingStructure = data.step3.pricingStructure
+        proposal.totalValue = formatCurrency(totals.grandTotal, data.step3.pricingStructure.currency)
+      }
+
       const elapsed = Date.now() - startTime
-      const remaining = Math.max(0, 3500 - elapsed)
+      const remaining = Math.max(0, 3000 - elapsed)
 
       setTimeout(() => {
         setIsGenerating(false)
@@ -167,7 +243,7 @@ export function NewProposalView({
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Proposals
+          Proposals
         </button>
 
         <StepIndicator currentStep={currentStep} />
@@ -179,7 +255,39 @@ export function NewProposalView({
       </header>
 
       {/* Main Form Content */}
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main className="mx-auto max-w-4xl px-4 py-8 space-y-4">
+        {/* Quick Action Assistants */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-3 shadow-2xs">
+          <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-primary" />
+            AI Accelerators:
+          </span>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => setShowBriefImporter(true)}
+              className="text-xs"
+            >
+              <Wand2 className="h-3.5 w-3.5 mr-1 text-primary" />
+              Import Brief / RFP
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => setShowTemplatePicker(true)}
+              className="text-xs"
+            >
+              <LayoutTemplate className="h-3.5 w-3.5 mr-1 text-primary" />
+              Start from Template
+            </Button>
+          </div>
+        </div>
+
         <Card className="shadow-md">
           <CardHeader className="border-b bg-muted/20">
             <div className="flex items-center justify-between">
@@ -249,6 +357,22 @@ export function NewProposalView({
           </CardContent>
         </Card>
       </main>
+
+      {/* Modals */}
+      {showBriefImporter && (
+        <BriefImporterModal
+          onExtractSuccess={handleApplyBriefExtraction}
+          onClose={() => setShowBriefImporter(false)}
+          toast={toast}
+        />
+      )}
+
+      {showTemplatePicker && (
+        <TemplatePickerModal
+          onSelectTemplate={handleApplyTemplate}
+          onClose={() => setShowTemplatePicker(false)}
+        />
+      )}
 
       {/* Generating Overlay */}
       {isGenerating && (
