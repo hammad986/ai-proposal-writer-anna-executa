@@ -14,6 +14,8 @@ import {
   Search,
   Sparkles,
   Trash2,
+  LayoutGrid,
+  List,
 } from 'lucide-react'
 import { AppShell } from '@/components/layout/app-shell'
 import { Button } from '@/components/ui/button'
@@ -22,6 +24,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { BrandSettingsModal } from '@/components/layout/brand-settings-modal'
 import { ClientPreviewModal } from '@/components/proposal/client-preview-modal'
 import { TemplatePickerModal } from '@/components/proposal/template-picker'
+import { PipelineBoard } from '@/components/proposal/pipeline-board'
 import { generateProposalPdf } from '@/pdf-generator'
 import type { BrandConfig, GeneratedProposal, ProposalStatus, ProposalTemplate } from '@/types'
 import { currencyToNumber, formatCurrency, uid } from '@/utils'
@@ -58,6 +61,7 @@ export function DashboardView({
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
   const [sortOrder, setSortOrder] = useState<SortOrder>('date-desc')
+  const [displayMode, setDisplayMode] = useState<'table' | 'pipeline'>('table')
   const [previewProposal, setPreviewProposal] = useState<GeneratedProposal | null>(null)
   const [showBrandModal, setShowBrandModal] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
@@ -311,8 +315,38 @@ export function DashboardView({
             })}
           </div>
 
-          {/* Search & Sort */}
+          {/* View Mode & Search/Sort */}
           <div className="flex items-center gap-2">
+            {/* View Mode Switcher */}
+            <div className="flex items-center gap-1 rounded-lg border bg-card p-1">
+              <button
+                type="button"
+                onClick={() => setDisplayMode('table')}
+                className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition cursor-pointer ${
+                  displayMode === 'table'
+                    ? 'bg-primary text-white shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Table View"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Table</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDisplayMode('pipeline')}
+                className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition cursor-pointer ${
+                  displayMode === 'pipeline'
+                    ? 'bg-primary text-white shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Kanban Pipeline View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Pipeline</span>
+              </button>
+            </div>
+
             <div className="relative flex-1 sm:w-60">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <input
@@ -331,15 +365,42 @@ export function DashboardView({
             >
               <option value="date-desc">Newest First</option>
               <option value="date-asc">Oldest First</option>
-              <option value="value-desc">Value (High $\to$ Low)</option>
-              <option value="value-asc">Value (Low $\to$ High)</option>
+              <option value="value-desc">Value (High to Low)</option>
+              <option value="value-asc">Value (Low to High)</option>
               <option value="client-asc">Client Name (A-Z)</option>
             </select>
           </div>
         </div>
 
-        {/* Proposals Table Card */}
-        <Card className="overflow-hidden">
+        {/* View Toggle: Pipeline Kanban vs Table */}
+        {displayMode === 'pipeline' ? (
+          <PipelineBoard
+            proposals={filteredProposals}
+            onSelectProposal={(p) => onNavigate('detail', p.id)}
+            onUpdateStatus={(id, newStatus) => {
+              const target = proposals.find((p) => p.id === id)
+              if (target) {
+                const nowIso = new Date().toISOString()
+                const updated: GeneratedProposal = {
+                  ...target,
+                  status: newStatus,
+                  statusHistory: [
+                    ...(target.statusHistory || []),
+                    {
+                      status: newStatus,
+                      timestamp: nowIso,
+                      note: `Stage updated to ${newStatus} via Kanban Pipeline`,
+                    },
+                  ],
+                  updatedAt: nowIso,
+                }
+                onUpdateProposal(updated)
+                toast.success(`Proposal moved to ${newStatus}`)
+              }
+            }}
+          />
+        ) : (
+          <Card className="overflow-hidden">
           <CardContent className="p-0">
             {filteredProposals.length === 0 ? (
               <div className="py-16 text-center space-y-3">
@@ -473,6 +534,7 @@ export function DashboardView({
             )}
           </CardContent>
         </Card>
+      )}
       </div>
 
       {/* Delete Confirmation Modal */}

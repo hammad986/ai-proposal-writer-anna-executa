@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
   Sparkles,
+  BookOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/field'
@@ -237,6 +238,34 @@ export function SectionCard({
                 ) : (
                   <RefreshCw className="h-4 w-4" />
                 )}
+              </Button>
+
+              <Button
+                size="icon"
+                variant="ghost"
+                title="Save section to Reusable Content Library"
+                onClick={() => {
+                  try {
+                    const raw = localStorage.getItem('proposal_custom_blocks') || '[]'
+                    const list = JSON.parse(raw)
+                    list.push({
+                      id: `custom_${Date.now()}`,
+                      title: section.title,
+                      description: `Saved from section "${section.title}"`,
+                      category: 'custom',
+                      content: section.content,
+                      format: section.type,
+                      tags: ['Custom Saved Block'],
+                      createdAt: new Date().toISOString(),
+                    })
+                    localStorage.setItem('proposal_custom_blocks', JSON.stringify(list))
+                    alert(`"${section.title}" saved to Content Library!`)
+                  } catch (e) {
+                    console.error('Failed to save to library:', e)
+                  }
+                }}
+              >
+                <BookOpen className="h-4 w-4 text-indigo-400" />
               </Button>
 
               {onDelete && (

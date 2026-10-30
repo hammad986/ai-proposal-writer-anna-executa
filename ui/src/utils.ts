@@ -69,6 +69,14 @@ export function addDaysToIso(isoDateStr: string, days: number): string {
   return formatLocalDate(dt)
 }
 
+export function getDaysRemaining(validUntilIso: string): number {
+  if (!validUntilIso) return 30
+  const valid = new Date(validUntilIso).getTime()
+  const now = new Date().getTime()
+  const diffDays = Math.ceil((valid - now) / 86400000)
+  return isNaN(diffDays) ? 30 : diffDays
+}
+
 export function isoDate(date = new Date()): string {
   return formatLocalDate(date)
 }
@@ -371,4 +379,120 @@ export function extractBriefLocally(briefText: string): {
     budgetRange,
     timeline: '4-6 weeks',
   }
+}
+
+/**
+ * Export Proposal as Clean GitHub-Flavored Markdown
+ */
+export function exportProposalAsMarkdown(proposal: GeneratedProposal): string {
+  const brand = proposal.brandConfig || {}
+  const agency = brand.companyName || proposal.formData.step1.agencyName || 'Agency'
+  const client = proposal.formData.step1.clientCompany || 'Client'
+
+  let md = `# ${proposal.title}\n\n`
+  md += `**Client:** ${client} | **Prepared by:** ${agency}  \n`
+  md += `**Date:** ${proposal.generatedDate} | **Valid Until:** ${proposal.validUntil}  \n`
+  md += `**Commercial Value:** ${proposal.totalValue} | **Status:** ${proposal.status.toUpperCase()}\n\n`
+  md += `---\n\n`
+
+  for (const s of proposal.sections) {
+    md += `## ${s.title}\n\n`
+    md += `${s.content}\n\n`
+  }
+
+  if (proposal.pricingStructure && proposal.pricingStructure.items.length > 0) {
+    md += `## Itemized Commercial Schedule\n\n`
+    md += `| Item | Category | Qty | Rate | Total |\n`
+    md += `| :--- | :--- | :--- | :--- | :--- |\n`
+    for (const item of proposal.pricingStructure.items) {
+      if (!item.isOptional || item.isSelected) {
+        md += `| ${item.title} | ${item.category} | ${item.quantity} | ${formatCurrency(item.unitRate, proposal.pricingStructure.currency)} | ${formatCurrency(item.quantity * item.unitRate, proposal.pricingStructure.currency)} |\n`
+      }
+    }
+    const totals = calculatePricingTotals(proposal.pricingStructure)
+    md += `\n**Grand Total:** ${formatCurrency(totals.grandTotal, proposal.pricingStructure.currency)}\n\n`
+  }
+
+  if (proposal.signoff) {
+    md += `---\n\n### Digital Sign-Off\n\n`
+    md += `**Signer:** ${proposal.signoff.signerName} (${proposal.signoff.signerTitle})  \n`
+    md += `**Timestamp:** ${proposal.signoff.signedAt}  \n`
+    md += `**Accepted Amount:** ${proposal.signoff.acceptedTotal}\n`
+  }
+
+  return md
+}
+
+/**
+ * Export Proposal as Standalone Interactive HTML Pitch Deck
+ */
+export function exportProposalAsHtml(proposal: GeneratedProposal): string {
+  const brand = proposal.brandConfig || {}
+  const agency = brand.companyName || proposal.formData.step1.agencyName || 'Agency'
+  const client = proposal.formData.step1.clientCompany || 'Client'
+  const color = brand.primaryColor || '#4f46e5'
+
+  const sectionsHtml = proposal.sections
+    .map(
+      (s) => `
+    <section class="section-card">
+      <h2>${s.title}</h2>
+      <div class="content">${s.content.replace(/\n/g, '<br/>')}</div>
+    </section>
+  `
+    )
+    .join('')
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${proposal.title}</title>
+  <style>
+    :root { --primary: ${color}; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #09090b; color: #f4f4f5; margin: 0; padding: 40px 20px; line-height: 1.6; }
+    .container { max-width: 860px; margin: 0 auto; background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 48px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .header { border-bottom: 2px solid #27272a; padding-bottom: 24px; margin-bottom: 32px; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; background: rgba(79, 70, 229, 0.15); color: #818cf8; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; color: #ffffff; }
+    .meta { font-size: 14px; color: #a1a1aa; }
+    .section-card { margin-bottom: 36px; padding-bottom: 24px; border-bottom: 1px solid #27272a; }
+    .section-card:last-child { border-bottom: none; }
+    h2 { font-size: 18px; color: #818cf8; margin-top: 0; border-left: 3px solid var(--primary); padding-left: 12px; }
+    .content { font-size: 14px; color: #d4d4d8; }
+    .footer { text-align: center; font-size: 12px; color: #71717a; margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge">Commercial Proposal</span>
+      <h1>${proposal.title}</h1>
+      <div class="meta">
+        <strong>Client:</strong> ${client} &bull; <strong>Agency:</strong> ${agency} &bull; <strong>Valid Until:</strong> ${proposal.validUntil}
+      </div>
+    </div>
+    ${sectionsHtml}
+    <div class="footer">
+      Generated securely via AI Proposal Creation & Management Workspace
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+/**
+ * Browser file download helper
+ */
+export function downloadFile(content: string, filename: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }

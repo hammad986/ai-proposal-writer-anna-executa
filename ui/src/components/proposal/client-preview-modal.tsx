@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   CheckCircle2,
   Download,
@@ -8,10 +8,23 @@ import {
   ShieldCheck,
   X,
   Sparkles,
+  Lock,
+  KeyRound,
+  ShieldAlert,
+  FileText,
+  TrendingUp,
+  FileDown,
+  Globe,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { calculatePricingTotals, formatCurrency } from '@/utils'
+import {
+  calculatePricingTotals,
+  formatCurrency,
+  downloadFile,
+  exportProposalAsHtml,
+  exportProposalAsMarkdown,
+} from '@/utils'
 import { generateProposalPdf } from '@/pdf-generator'
 import type { GeneratedProposal, PricingStructure } from '@/types'
 
@@ -51,7 +64,55 @@ export function ClientPreviewModal({
   const [revisionNotes, setRevisionNotes] = useState('')
   const [showRevisionForm, setShowRevisionForm] = useState(false)
 
+  // Security & Passcode state
+  const hasPasscode = Boolean(proposal.security?.requirePasscode && proposal.security?.passcode)
+  const [isUnlocked, setIsUnlocked] = useState(!hasPasscode)
+  const [passcodeAttempt, setPasscodeAttempt] = useState('')
+  const [passcodeError, setPasscodeError] = useState(false)
+
+  // NDA state
+  const hasNda = Boolean(proposal.security?.requireNdaAgreement)
+  const [ndaAccepted, setNdaAccepted] = useState(!hasNda)
+
+  // Record Telemetry on Mount
+  useEffect(() => {
+    if (proposal.analytics) {
+      const current = proposal.analytics
+      const updated = {
+        ...current,
+        totalViews: current.totalViews + 1,
+        uniqueViewers: current.uniqueViewers === 0 ? 1 : current.uniqueViewers,
+        lastViewedAt: new Date().toISOString(),
+        timelineEvents: [
+          {
+            id: `evt_${Date.now()}`,
+            eventType: 'opened' as const,
+            description: 'Proposal opened in interactive Client Presentation Mode',
+            timestamp: new Date().toISOString(),
+            clientDevice: 'Desktop Browser',
+          },
+          ...current.timelineEvents,
+        ],
+      }
+      onUpdateProposal({
+        ...proposal,
+        analytics: updated,
+      })
+    }
+  }, [])
+
   const totals = calculatePricingTotals(activePricing)
+
+  const handleUnlockWithPasscode = () => {
+    if (passcodeAttempt.trim() === proposal.security?.passcode?.trim()) {
+      setIsUnlocked(true)
+      setPasscodeError(false)
+      toast.success('Passcode verified! Proposal unlocked.')
+    } else {
+      setPasscodeError(true)
+      toast.error('Incorrect passcode. Please check with the sender.')
+    }
+  }
 
   const handleToggleOptionalItem = (itemId: string) => {
     const updatedItems = activePricing.items.map((it) =>
@@ -147,11 +208,109 @@ export function ClientPreviewModal({
     setShowRevisionForm(false)
   }
 
+  // 1. Passcode Lock Screen
+  if (!isUnlocked) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div className="w-full max-w-md p-8 rounded-2xl bg-zinc-950 border border-zinc-800 text-center space-y-5 shadow-2xl">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
+            <Lock className="w-7 h-7" />
+          </div>
+
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-bold text-white">Confidential Proposal</h3>
+            <p className="text-xs text-zinc-400">
+              This document is protected with a security passcode set by the sender.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <input
+              type="password"
+              value={passcodeAttempt}
+              onChange={(e) => setPasscodeAttempt(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleUnlockWithPasscode()}
+              placeholder="Enter passcode to unlock..."
+              className={`w-full py-2.5 px-4 rounded-xl bg-zinc-900 border text-sm text-center text-white placeholder-zinc-500 focus:outline-none transition-colors ${
+                passcodeError ? 'border-rose-500' : 'border-zinc-800 focus:border-indigo-500'
+              }`}
+            />
+            {passcodeError && (
+              <p className="text-xs text-rose-400">Incorrect passcode. Please try again.</p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-1/2 py-2 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleUnlockWithPasscode}
+              className="w-1/2 py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-colors shadow-sm"
+            >
+              Unlock Proposal
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 2. NDA Acceptance Gate
+  if (!ndaAccepted) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div className="w-full max-w-lg p-8 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-5 shadow-2xl">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <FileCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Mutual Confidentiality Agreement</h3>
+              <p className="text-xs text-zinc-400">Please review before accessing proprietary proposal details</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 leading-relaxed max-h-48 overflow-y-auto">
+            {proposal.security?.ndaText ||
+              'This document contains proprietary commercial terms and technical specifications. By accepting, you agree to preserve its confidentiality.'}
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-1/3 py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+            >
+              Decline
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setNdaAccepted(true)
+                toast.success('Confidentiality terms accepted')
+              }}
+              className="w-2/3 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-medium text-white flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              I Agree &amp; View Proposal
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="relative w-full max-w-4xl rounded-xl border bg-background shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
         {/* Top Floating Client Toolbar */}
-        <div className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/95 px-6 py-3.5 backdrop-blur">
+        <div className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/95 px-6 py-3.5 backdrop-blur flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="flex h-7 items-center rounded-full bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
               <Eye className="h-3.5 w-3.5 mr-1.5" />
@@ -162,7 +321,43 @@ export function ClientPreviewModal({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              size="sm"
+              variant="outline"
+              title="Download clean Markdown file"
+              onClick={() => {
+                try {
+                  const md = exportProposalAsMarkdown(proposal)
+                  downloadFile(md, `${proposal.title.replace(/[^a-zA-Z0-9]/g, '_')}.md`, 'text/markdown')
+                  toast.success('Markdown file downloaded')
+                } catch {
+                  toast.error('Failed to export Markdown')
+                }
+              }}
+            >
+              <FileText className="h-3.5 w-3.5 mr-1" />
+              Markdown
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              title="Download standalone HTML presentation"
+              onClick={() => {
+                try {
+                  const html = exportProposalAsHtml(proposal)
+                  downloadFile(html, `${proposal.title.replace(/[^a-zA-Z0-9]/g, '_')}.html`, 'text/html')
+                  toast.success('Standalone HTML deck downloaded')
+                } catch {
+                  toast.error('Failed to export HTML')
+                }
+              }}
+            >
+              <Globe className="h-3.5 w-3.5 mr-1" />
+              HTML Deck
+            </Button>
+
             <Button
               size="sm"
               variant="outline"
@@ -178,6 +373,7 @@ export function ClientPreviewModal({
               <Download className="h-4 w-4 mr-1.5" />
               Download PDF
             </Button>
+
             <button
               onClick={onClose}
               className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
@@ -189,6 +385,14 @@ export function ClientPreviewModal({
 
         {/* Document Body */}
         <div className="px-6 pb-8 space-y-8 max-w-3xl mx-auto">
+          {/* Confidentiality Watermark Banner */}
+          {proposal.security?.watermarkConfidential && (
+            <div className="py-2 px-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center text-xs font-bold uppercase tracking-widest text-amber-500 flex items-center justify-center gap-2">
+              <ShieldAlert className="w-4 h-4" />
+              Confidential &bull; Do Not Distribute
+            </div>
+          )}
+
           {/* Header Banner */}
           <div className="border-b pb-6 space-y-3">
             <div className="flex items-center justify-between">
@@ -243,6 +447,54 @@ export function ClientPreviewModal({
               </div>
             ))}
           </div>
+
+          {/* Estimated ROI & Payback Analysis */}
+          {proposal.roiEstimation && (
+            <div className="rounded-xl border border-indigo-500/20 bg-indigo-950/20 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">Projected Return on Investment (ROI)</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Quantitative financial modeling of efficiency gains and operational cost savings
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  {proposal.roiEstimation.paybackMonths} Mo Payback
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
+                <div className="p-3 rounded-lg bg-card/60 border border-border">
+                  <span className="block text-muted-foreground text-[10px] uppercase font-semibold">Hours Saved / Mo</span>
+                  <span className="text-base font-bold text-foreground">{proposal.roiEstimation.hoursSavedPerMonth} hrs/mo</span>
+                </div>
+
+                <div className="p-3 rounded-lg bg-card/60 border border-border">
+                  <span className="block text-muted-foreground text-[10px] uppercase font-semibold">Annual Cost Savings</span>
+                  <span className="text-base font-bold text-emerald-500">
+                    {formatCurrency(proposal.roiEstimation.annualCostSavings, activePricing.currency)}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-lg bg-card/60 border border-border">
+                  <span className="block text-muted-foreground text-[10px] uppercase font-semibold">Payback Period</span>
+                  <span className="text-base font-bold text-amber-500">{proposal.roiEstimation.paybackMonths} Months</span>
+                </div>
+
+                <div className="p-3 rounded-lg bg-card/60 border border-border">
+                  <span className="block text-muted-foreground text-[10px] uppercase font-semibold">3-Year Net ROI</span>
+                  <span className="text-base font-bold text-indigo-400">
+                    {formatCurrency(proposal.roiEstimation.threeYearNetRoi, activePricing.currency)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Interactive Pricing Section (Dynamic Add-on recalculation) */}
           {activePricing.items.length > 0 && (

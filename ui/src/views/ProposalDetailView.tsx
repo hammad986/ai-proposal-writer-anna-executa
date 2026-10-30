@@ -15,6 +15,11 @@ import {
   Clock,
   Layers,
   FileText,
+  BarChart3,
+  Lock,
+  BookOpen,
+  GitCompare,
+  Globe,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -24,9 +29,19 @@ import { QualityAuditModal } from '@/components/proposal/quality-audit-modal'
 import { ClientPreviewModal } from '@/components/proposal/client-preview-modal'
 import { VersionHistoryModal } from '@/components/proposal/version-history-modal'
 import { PricingBuilder } from '@/components/proposal/pricing-builder'
+import { AnalyticsDrawer } from '@/components/proposal/analytics-drawer'
+import { ContentLibraryModal } from '@/components/proposal/content-library-modal'
+import { VersionDiffModal } from '@/components/proposal/version-diff-modal'
+import { SecuritySettingsModal } from '@/components/proposal/security-settings-modal'
 import { invokeExecutaTool } from '@/anna-bridge'
 import { generateProposalPdf } from '@/pdf-generator'
-import { calculatePricingTotals, formatCurrency } from '@/utils'
+import {
+  calculatePricingTotals,
+  formatCurrency,
+  exportProposalAsHtml,
+  exportProposalAsMarkdown,
+  downloadFile,
+} from '@/utils'
 import type { GeneratedProposal, ProposalSection, ProposalStatus } from '@/types'
 
 const STATUS_OPTIONS: Array<{ value: ProposalStatus; label: string }> = [
@@ -61,6 +76,10 @@ export function ProposalDetailView({
   const [showVersionModal, setShowVersionModal] = useState(false)
   const [showPricingBuilder, setShowPricingBuilder] = useState(false)
   const [showAddSectionModal, setShowAddSectionModal] = useState(false)
+  const [showAnalyticsDrawer, setShowAnalyticsDrawer] = useState(false)
+  const [showLibraryModal, setShowLibraryModal] = useState(false)
+  const [showDiffModal, setShowDiffModal] = useState(false)
+  const [showSecurityModal, setShowSecurityModal] = useState(false)
   const [newSectionTitle, setNewSectionTitle] = useState('')
   const [newSectionType, setNewSectionType] = useState<ProposalSection['type']>('text')
 
@@ -298,6 +317,58 @@ export function ProposalDetailView({
               )}
             </Button>
 
+            {/* Visual Diff */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowDiffModal(true)}
+              title="Visual Version Diff & Changelog"
+            >
+              <GitCompare className="h-4 w-4 mr-1.5 text-zinc-400" />
+              Diff
+            </Button>
+
+            {/* Content Library */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowLibraryModal(true)}
+              title="Insert Agency Content Blocks"
+            >
+              <BookOpen className="h-4 w-4 mr-1.5 text-indigo-400" />
+              Library
+            </Button>
+
+            {/* Client Telemetry */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAnalyticsDrawer(true)}
+              title="Client Telemetry & Section Heatmap"
+            >
+              <BarChart3 className="h-4 w-4 mr-1.5 text-purple-400" />
+              Telemetry
+              {proposal.analytics && proposal.analytics.totalViews > 0 && (
+                <span className="ml-1.5 rounded-full bg-purple-500/20 px-1.5 py-0.2 text-[10px] font-bold text-purple-400">
+                  {proposal.analytics.totalViews}
+                </span>
+              )}
+            </Button>
+
+            {/* Security & Access Controls */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowSecurityModal(true)}
+              title="Proposal Security & Passcode Settings"
+            >
+              <Lock className="h-4 w-4 mr-1.5 text-amber-400" />
+              Security
+              {proposal.security?.requirePasscode && (
+                <span className="ml-1.5 w-2 h-2 rounded-full bg-amber-400" />
+              )}
+            </Button>
+
             {/* Edit Pricing Builder */}
             <Button
               size="sm"
@@ -306,6 +377,44 @@ export function ProposalDetailView({
             >
               <DollarSign className="h-4 w-4 mr-1.5" />
               {showPricingBuilder ? 'Hide Pricing' : 'Pricing Builder'}
+            </Button>
+
+            {/* Export Markdown */}
+            <Button
+              size="sm"
+              variant="outline"
+              title="Download clean Markdown file"
+              onClick={() => {
+                try {
+                  const md = exportProposalAsMarkdown(proposal)
+                  downloadFile(md, `${proposal.title.replace(/[^a-zA-Z0-9]/g, '_')}.md`, 'text/markdown')
+                  toast.success('Markdown file downloaded')
+                } catch {
+                  toast.error('Failed to export Markdown')
+                }
+              }}
+            >
+              <FileText className="h-3.5 w-3.5 mr-1" />
+              Markdown
+            </Button>
+
+            {/* Export Standalone HTML Pitch Deck */}
+            <Button
+              size="sm"
+              variant="outline"
+              title="Download standalone HTML Pitch Deck"
+              onClick={() => {
+                try {
+                  const html = exportProposalAsHtml(proposal)
+                  downloadFile(html, `${proposal.title.replace(/[^a-zA-Z0-9]/g, '_')}.html`, 'text/html')
+                  toast.success('Standalone HTML deck downloaded')
+                } catch {
+                  toast.error('Failed to export HTML')
+                }
+              }}
+            >
+              <Globe className="h-3.5 w-3.5 mr-1" />
+              HTML
             </Button>
 
             {/* Download PDF */}
@@ -561,6 +670,65 @@ export function ProposalDetailView({
           toast={toast}
         />
       )}
+
+      {/* Analytics Drawer */}
+      <AnalyticsDrawer
+        isOpen={showAnalyticsDrawer}
+        onClose={() => setShowAnalyticsDrawer(false)}
+        proposal={proposal}
+        onUpdateAnalytics={(updatedAnalytics) => {
+          onUpdateProposal({
+            ...proposal,
+            analytics: updatedAnalytics,
+          })
+          toast.success('Engagement telemetry recorded')
+        }}
+      />
+
+      {/* Content Library Modal */}
+      <ContentLibraryModal
+        isOpen={showLibraryModal}
+        onClose={() => setShowLibraryModal(false)}
+        onInsertSection={(newSection) => {
+          const updatedSections = [...proposal.sections, newSection]
+          onUpdateProposal({
+            ...proposal,
+            sections: updatedSections,
+            updatedAt: new Date().toISOString(),
+          })
+          toast.success(`Inserted "${newSection.title}" into proposal`)
+        }}
+      />
+
+      {/* Version Diff Modal */}
+      <VersionDiffModal
+        isOpen={showDiffModal}
+        onClose={() => setShowDiffModal(false)}
+        currentProposal={proposal}
+        versions={proposal.versions || []}
+      />
+
+      {/* Security Settings Modal */}
+      <SecuritySettingsModal
+        isOpen={showSecurityModal}
+        onClose={() => setShowSecurityModal(false)}
+        security={
+          proposal.security || {
+            requirePasscode: false,
+            requireNdaAgreement: false,
+            expiryNoticeDays: 7,
+            watermarkConfidential: false,
+          }
+        }
+        onSave={(updatedSecurity) => {
+          onUpdateProposal({
+            ...proposal,
+            security: updatedSecurity,
+            updatedAt: new Date().toISOString(),
+          })
+          toast.success('Security settings updated')
+        }}
+      />
     </div>
   )
 }

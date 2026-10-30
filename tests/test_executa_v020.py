@@ -25,7 +25,7 @@ import ai_proposal_writer_anna_plugin as plugin
 
 class TestExecutaV020(unittest.TestCase):
     def test_version_and_manifest(self):
-        self.assertEqual(plugin.MANIFEST["version"], "0.2.0")
+        self.assertEqual(plugin.MANIFEST["version"], "0.3.0")
         tool_names = [t["name"] for t in plugin.MANIFEST["tools"]]
         self.assertIn("ping", tool_names)
         self.assertIn("generate_proposal", tool_names)
@@ -33,6 +33,8 @@ class TestExecutaV020(unittest.TestCase):
         self.assertIn("audit_proposal", tool_names)
         self.assertIn("refine_text", tool_names)
         self.assertIn("extract_brief", tool_names)
+        self.assertIn("compare_versions", tool_names)
+        self.assertIn("calculate_roi", tool_names)
 
     def test_ping(self):
         res = plugin.invoke("ping", {}, {})
@@ -140,6 +142,38 @@ class TestExecutaV020(unittest.TestCase):
         self.assertIn("Clinical Trial Dashboard", data.get("projectName", ""))
         self.assertIn("$35,000", data.get("budgetRange", ""))
         self.assertTrue(len(data.get("keyFeatures", "")) > 10)
+
+    def test_compare_versions(self):
+        v_a = {
+            "totalValue": "$15,000",
+            "sections": [
+                {"title": "Scope of Work", "content": "Baseline"},
+                {"title": "Pricing", "content": "$15k"},
+            ],
+        }
+        v_b = {
+            "totalValue": "$22,000",
+            "sections": [
+                {"title": "Scope of Work", "content": "Expanded"},
+                {"title": "Pricing", "content": "$22k"},
+                {"title": "Security & SOC2", "content": "Added compliance"},
+            ],
+        }
+        res = plugin.invoke("compare_versions", {"versionA": v_a, "versionB": v_b}, {})
+        self.assertTrue(res.get("success"), f"compare_versions failed: {res}")
+        comp = res["data"]["comparison"]
+        self.assertEqual(comp.get("valA"), "$15,000")
+        self.assertEqual(comp.get("valB"), "$22,000")
+        self.assertIn("Security & SOC2", comp.get("addedSections", []))
+
+    def test_calculate_roi(self):
+        res = plugin.invoke("calculate_roi", {"budget": 25000, "hoursSavedPerMonth": 60, "hourlyRate": 80}, {})
+        self.assertTrue(res.get("success"), f"calculate_roi failed: {res}")
+        roi = res["data"]["roi"]
+        self.assertEqual(roi["monthlyCostSavings"], 4800.0)
+        self.assertEqual(roi["annualCostSavings"], 57600.0)
+        self.assertTrue(roi["paybackMonths"] > 0)
+        self.assertTrue(roi["threeYearNetRoi"] > 0)
 
 
 if __name__ == "__main__":

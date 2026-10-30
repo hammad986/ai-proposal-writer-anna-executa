@@ -2,8 +2,8 @@
   "name": "tool-hammad-ai-proposal-writer-anna-84jkbu68",
   "slug": "ai-proposal-writer-anna",
   "display_name": "AI Proposal Writer Tool",
-  "version": "0.2.0",
-  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, and LLM sampling.",
+  "version": "0.3.0",
+  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, version comparison, ROI calculation, and LLM sampling.",
   "host_capabilities": ["llm.sample"],
   "tools": [
     {
@@ -98,6 +98,48 @@
           "type": "string",
           "description": "Raw project brief, email, or RFP text.",
           "required": true
+        }
+      ]
+    },
+    {
+      "name": "compare_versions",
+      "description": "Analyze differences between two proposal versions and provide an executive changelog summary of scope, pricing, and risk alterations.",
+      "parameters": [
+        {
+          "name": "versionA",
+          "type": "object",
+          "description": "Original proposal snapshot.",
+          "required": true
+        },
+        {
+          "name": "versionB",
+          "type": "object",
+          "description": "Target proposal snapshot.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "calculate_roi",
+      "description": "Deterministically model client ROI, hours saved, monthly/annual savings, payback period, and 3-year net value.",
+      "parameters": [
+        {
+          "name": "budget",
+          "type": "number",
+          "description": "Total proposal commercial investment budget.",
+          "required": true
+        },
+        {
+          "name": "hoursSavedPerMonth",
+          "type": "number",
+          "description": "Estimated operational hours saved per month.",
+          "required": false
+        },
+        {
+          "name": "hourlyRate",
+          "type": "number",
+          "description": "Client average hourly rate value.",
+          "required": false
         }
       ]
     }

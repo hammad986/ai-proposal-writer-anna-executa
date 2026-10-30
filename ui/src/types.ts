@@ -100,6 +100,59 @@ export interface ClientSignoff {
   notes?: string
 }
 
+export interface SectionEngagement {
+  sectionTitle: string
+  timeSpentSeconds: number
+  viewPercentage: number
+}
+
+export interface EngagementEvent {
+  id: string
+  eventType: 'opened' | 'scrolled' | 'addon_toggled' | 'download_pdf' | 'signed'
+  description: string
+  timestamp: string
+  clientDevice?: string
+}
+
+export interface ProposalAnalytics {
+  totalViews: number
+  uniqueViewers: number
+  totalTimeSpentSeconds: number
+  lastViewedAt?: string
+  sectionsEngagement: SectionEngagement[]
+  timelineEvents: EngagementEvent[]
+}
+
+export interface ContentLibraryBlock {
+  id: string
+  title: string
+  category: 'agency' | 'case_study' | 'security' | 'warranty' | 'tech_stack' | 'terms' | 'custom'
+  description: string
+  content: string
+  format: 'text' | 'table' | 'phases' | 'list'
+  tags: string[]
+  createdAt: string
+}
+
+export interface ProposalSecurity {
+  requirePasscode: boolean
+  passcode?: string
+  requireNdaAgreement: boolean
+  ndaText?: string
+  expiryNoticeDays: number
+  watermarkConfidential: boolean
+}
+
+export interface RoiEstimation {
+  hoursSavedPerMonth: number
+  hourlyRateValue: number
+  monthlyCostSavings: number
+  annualCostSavings: number
+  projectedRevenueBoostPercent: number
+  paybackMonths: number
+  threeYearNetRoi: number
+}
+
 export interface BrandConfig {
   companyName: string
   tagline: string
@@ -210,4 +263,7 @@ export interface GeneratedProposal {
   versions?: ProposalVersionSnapshot[]
   signoff?: ClientSignoff
   brandConfig?: Partial<BrandConfig>
+  analytics?: ProposalAnalytics
+  security?: ProposalSecurity
+  roiEstimation?: RoiEstimation
 }

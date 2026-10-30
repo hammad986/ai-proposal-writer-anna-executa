@@ -1,10 +1,14 @@
 import type {
   BrandConfig,
+  ContentLibraryBlock,
   GeneratedProposal,
   PricingItem,
   PricingStructure,
+  ProposalAnalytics,
   ProposalFormData,
+  ProposalSecurity,
   ProposalTemplate,
+  RoiEstimation,
 } from './types'
 
 export const technicalRequirements = [
@@ -515,6 +519,224 @@ export function createDefaultPricingStructure(
   }
 }
 
+export const defaultContentLibrary: ContentLibraryBlock[] = [
+  {
+    id: 'block_case_study_roi',
+    title: 'Enterprise Cloud Migration & 320% ROI Case Study',
+    category: 'case_study',
+    description: 'Proven enterprise transformation results demonstrating infrastructure cost reduction and 99.99% uptime.',
+    tags: ['ROI', 'Enterprise', 'Cloud', 'Case Study'],
+    createdAt: '2026-10-15T10:00:00Z',
+    format: 'text',
+    content: `### Proven Track Record: Enterprise Case Study
+
+**Client:** FinFlow Global Enterprises  
+**Challenge:** Fragmented legacy monolithic architecture experiencing high operational latency, \$24,000/mo server bloat, and manual deployment outages.  
+**Delivered Solution:** Full containerized microservices migration to AWS ECS with zero-downtime CI/CD deployment pipelines, Redis caching layer, and SOC2-compliant logging.
+
+**Measurable Business Impact:**
+- **320% Return on Investment (ROI)** realized within the first 9 months post-handover.
+- **78% Reduction in Infrastructure Overhead:** Cloud hosting spend dropped from \$24,000/mo to \$5,280/mo.
+- **99.99% Production Uptime:** Zero unscheduled outages over 12 consecutive months of peak retail traffic.
+- **Deployment Velocity:** Release cycles accelerated from bi-weekly manual pushes to 14 automated daily deploys.`,
+  },
+  {
+    id: 'block_soc2_compliance',
+    title: 'Enterprise Security, SOC2 & GDPR Compliance Guarantee',
+    category: 'security',
+    description: 'Rigorous multi-layer security governance including AES-256 encryption, role-based access, and audit logging.',
+    tags: ['Security', 'SOC2', 'GDPR', 'Compliance'],
+    createdAt: '2026-10-15T10:00:00Z',
+    format: 'text',
+    content: `### Security, Privacy & Enterprise Compliance Framework
+
+Our development and deployment practices adhere strictly to institutional security standards, ensuring complete data sovereignty and regulatory conformance:
+
+1. **Cryptographic Standards:** All client data in transit is enforced using TLS 1.3 with HSTS preloading. Data at rest is encrypted using AES-256 with automated KMS key rotation.
+2. **SOC2 Type II & GDPR Conformance:**
+   - Strict Principle of Least Privilege (PoLP) role-based access control (RBAC).
+   - Automated, immutable audit trails logging every administrative mutation.
+   - Granular 'Right to Erasure' and data portability endpoints compliant with EU GDPR Article 17.
+3. **Automated Vulnerability Scanning:** Every build undergoes static application security testing (SAST), software composition analysis (SCA) for third-party dependencies, and OWASP Top 10 container vulnerability scans before deployment.
+4. **Disaster Recovery & Redundancy:** Continuous geo-redundant database backups with automated point-in-time recovery (PITR) ensuring an RPO < 5 minutes and RTO < 30 minutes.`,
+  },
+  {
+    id: 'block_agile_velocity',
+    title: 'Dedicated Agile Squad & Sprint Velocity Commitment',
+    category: 'agency',
+    description: 'Detailed explanation of sprint ceremonies, weekly stakeholder demos, and milestone visibility.',
+    tags: ['Agile', 'Sprint Cadence', 'Project Management'],
+    createdAt: '2026-10-15T10:00:00Z',
+    format: 'text',
+    content: `### Dedicated Engineering Squad & Sprint Cadence
+
+We execute your project using a high-velocity, disciplined 2-week Agile sprint framework designed to eliminate guesswork and maintain complete transparency:
+
+- **Dedicated Squad Assignment:** Your team consists of a Lead Solutions Architect, Senior Full-Stack Engineers, dedicated QA Automation Specialist, and a Technical Project Manager.
+- **Bi-Weekly Working Demos:** At the end of every sprint cycle, we host a live, interactive product demo of functional software on a dedicated staging environment for your feedback.
+- **Transparent Asynchronous Communication:** Real-time Slack/Teams channel access directly with the engineers, daily asynchronous standups, and full Jira/Linear sprint board visibility.
+- **Predictable Sprint Burndown:** Deliverables are defined by measurable acceptance criteria; scope modifications are managed dynamically without derailment or hidden charges.`,
+  },
+  {
+    id: 'block_90day_warranty',
+    title: '90-Day Post-Launch Hypercare & 4-Hour SLA Guarantee',
+    category: 'warranty',
+    description: 'Zero-cost bug fixing warranty and rapid-response SLA covering production stability.',
+    tags: ['Warranty', 'SLA', 'Support', 'Quality Guarantee'],
+    createdAt: '2026-10-15T10:00:00Z',
+    format: 'text',
+    content: `### 90-Day Post-Launch Hypercare & SLA Guarantee
+
+We stand firmly behind the architectural integrity and operational reliability of our work with an inclusive 90-day comprehensive warranty:
+
+- **100% Defect-Free Guarantee:** Any bug, functional deviation from specification, or regression identified within 90 days of production launch is remediated at zero additional cost.
+- **Guaranteed Response SLA:**
+  - **Severity 1 (Critical Outage):** Response within 1 hour; continuous remediation until resolved.
+  - **Severity 2 (Major Impairment):** Response within 4 hours; patch deployed within 24 hours.
+  - **Severity 3 (Minor / Cosmetic):** Addressed in next scheduled maintenance release.
+- **Production Performance Monitoring:** Active APM tracing with automated alerts covering API latency, error rate thresholds, and database connection pool health.`,
+  },
+  {
+    id: 'block_cloud_architecture',
+    title: 'High-Availability Scalable Cloud Architecture Blueprint',
+    category: 'tech_stack',
+    description: 'Architectural overview of modern auto-scaling, caching, and CI/CD pipeline infrastructure.',
+    tags: ['Architecture', 'DevOps', 'Scalability'],
+    createdAt: '2026-10-15T10:00:00Z',
+    format: 'text',
+    content: `### High-Availability Scalable Cloud Architecture
+
+The technical foundation is engineered to handle 10x traffic spikes with minimal latency and automatic elasticity:
+
+\`\`\`
+[ Edge CDN / Cloudflare ] ──> [ Managed Load Balancer (ALB) ]
+                                      │
+              ┌───────────────────────┴───────────────────────┐
+              ▼                                               ▼
+    [ App Service Cluster A ]                       [ App Service Cluster B ]
+              │                                               │
+              └───────────────────────┬───────────────────────┘
+                                      │
+              ┌───────────────────────┴───────────────────────┐
+              ▼                                               ▼
+    [ Read-Replica DB Pool ]                        [ Primary PostgreSQL Core ]
+              │                                               │
+              └───────────────> [ Redis Cache ] <─────────────┘
+\`\`\`
+
+- **Stateless Application Tier:** Containerized Node.js/Go services horizontally auto-scaled based on CPU utilization and request volume.
+- **Dual-Layer Caching:** Edge caching for static media assets coupled with in-memory Redis clustering for database query offloading.
+- **Automated Blue/Green Deploys:** Zero-downtime rolling updates verified by health-check canary gates before routing live traffic.`,
+  },
+  {
+    id: 'block_retainer_escrow',
+    title: 'Commercial Terms, Retainer Protection & Escrow Protocol',
+    category: 'terms',
+    description: 'Clear milestone payment structure, scope change order governance, and IP assignment.',
+    tags: ['Commercial Terms', 'Governance', 'Milestones'],
+    createdAt: '2026-10-15T10:00:00Z',
+    format: 'text',
+    content: `### Commercial Governance & Milestone Protection
+
+Our commercial structure is designed to be fair, milestone-gated, and risk-mitigated for both parties:
+
+1. **Milestone-Based Disbursements:** Invoices are triggered exclusively upon mutual approval of verifiable deliverables, eliminating capital risk.
+2. **Formal Change Order Process:** Any feature request outside the baseline Scope of Work is estimated transparently in writing with timeline impact before any billable work begins.
+3. **Intellectual Property Assignment:** Full, unencumbered ownership of all custom source code, design assets, and database schemas transfers to the Client immediately upon final milestone settlement.
+4. **No Vendor Lock-In:** All source code is delivered fully documented with standard Docker configurations, comprehensive README setup guides, and automated CI/CD scripts.`,
+  },
+  {
+    id: 'block_nda_framework',
+    title: 'Mutual Non-Disclosure Agreement (NDA) & IP Protection',
+    category: 'security',
+    description: 'Standard institutional confidentiality agreement protecting trade secrets and proprietary data.',
+    tags: ['NDA', 'Confidentiality', 'Legal', 'IP Protection'],
+    createdAt: '2026-10-15T10:00:00Z',
+    format: 'text',
+    content: `### Mutual Non-Disclosure & Intellectual Property Protection
+
+1. **Confidentiality Obligation:** Both parties agree to preserve the strict confidentiality of all proprietary business data, strategic roadmap details, customer records, and trade secrets disclosed during this engagement.
+2. **Non-Use Limitation:** Confidential Information shall be used exclusively for the performance of this project and shall not be published, reverse-engineered, or transferred to any third party without explicit prior written consent.
+3. **Exclusion of Public Information:** Obligations do not apply to information that is publicly known through no fault of the receiving party or independently developed without reference to proprietary assets.
+4. **Perpetual IP Transfer:** All deliverables, work product, documentation, and customized logic created under this agreement constitute 'work made for hire' belonging solely to the Client upon account settlement.`,
+  },
+  {
+    id: 'block_client_testimonials',
+    title: 'Verified Client Endorsements & Industry Recognition',
+    category: 'agency',
+    description: 'Real-world client testimonials highlighting technical execution and delivery reliability.',
+    tags: ['Testimonials', 'Social Proof', 'Reputation'],
+    createdAt: '2026-10-15T10:00:00Z',
+    format: 'text',
+    content: `### Client Endorsements & Operational Excellence
+
+> *"Working with this team was an exceptional experience. They delivered our core platform 2 weeks ahead of schedule and the code quality was clean, robust, and effortlessly scalable."*  
+> **— David Chen, CTO at Apex Mobility**
+
+> *"Their attention to architecture, security, and milestone communication is what sets them apart from typical agencies. Our conversion rates increased by 44% in the first quarter."*  
+> **— Elena Rostova, VP Product at Quantify SaaS**
+
+**Key Recognition & Benchmarks:**
+- 98.4% Client Satisfaction & Recommendation Score across 45+ enterprise deliveries.
+- Average sprint velocity accuracy within ±4% of initial scoping estimates.`,
+  },
+]
+
+export function createDefaultAnalytics(): ProposalAnalytics {
+  return {
+    totalViews: 0,
+    uniqueViewers: 0,
+    totalTimeSpentSeconds: 0,
+    sectionsEngagement: [
+      { sectionTitle: 'Scope of Work & Deliverables', timeSpentSeconds: 0, viewPercentage: 0 },
+      { sectionTitle: 'Itemized Investment & Pricing', timeSpentSeconds: 0, viewPercentage: 0 },
+      { sectionTitle: 'Executive Summary', timeSpentSeconds: 0, viewPercentage: 0 },
+      { sectionTitle: 'Timeline & Phased Milestones', timeSpentSeconds: 0, viewPercentage: 0 },
+      { sectionTitle: 'Terms, Warranties & Governance', timeSpentSeconds: 0, viewPercentage: 0 },
+    ],
+    timelineEvents: [
+      {
+        id: `event_${Date.now()}`,
+        eventType: 'opened',
+        description: 'Proposal drafted and initialized in workspace',
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  }
+}
+
+export function createDefaultSecurity(): ProposalSecurity {
+  return {
+    requirePasscode: false,
+    passcode: '',
+    requireNdaAgreement: false,
+    ndaText: 'This proposal contains proprietary and confidential business information. By accessing this proposal, you agree not to distribute or disclose its contents without written authorization.',
+    expiryNoticeDays: 7,
+    watermarkConfidential: false,
+  }
+}
+
+export function calculateDefaultRoi(totalBudget: number): RoiEstimation {
+  const budget = Math.max(totalBudget, 5000)
+  const hoursSavedPerMonth = Math.round(budget / 250)
+  const hourlyRateValue = 75
+  const monthlyCostSavings = hoursSavedPerMonth * hourlyRateValue
+  const annualCostSavings = monthlyCostSavings * 12
+  const projectedRevenueBoostPercent = Math.min(Math.round((budget / 1000) * 1.5), 35)
+  const paybackMonths = Math.max(Number((budget / monthlyCostSavings).toFixed(1)), 0.8)
+  const threeYearNetRoi = annualCostSavings * 3 - budget
+
+  return {
+    hoursSavedPerMonth,
+    hourlyRateValue,
+    monthlyCostSavings,
+    annualCostSavings,
+    projectedRevenueBoostPercent,
+    paybackMonths,
+    threeYearNetRoi,
+  }
+}
+
 export function normalizeProposal(raw: any): GeneratedProposal {
   const today = new Date().toISOString().slice(0, 10)
   const defaultValid = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
@@ -591,6 +813,11 @@ export function normalizeProposal(raw: any): GeneratedProposal {
         },
       ]
 
+  // Numeric budget value for ROI
+  const numericBudget = pricingStructure.items
+    .filter((i) => !i.isOptional || i.isSelected)
+    .reduce((sum, item) => sum + item.quantity * item.unitRate, 0) || 15000
+
   return {
     id: raw.id || `proposal_${Date.now()}`,
     formData,
@@ -609,6 +836,9 @@ export function normalizeProposal(raw: any): GeneratedProposal {
     versions: Array.isArray(raw.versions) ? raw.versions : [],
     signoff: raw.signoff,
     brandConfig: raw.brandConfig,
+    analytics: raw.analytics || createDefaultAnalytics(),
+    security: raw.security || createDefaultSecurity(),
+    roiEstimation: raw.roiEstimation || calculateDefaultRoi(numericBudget),
   }
 }
 
