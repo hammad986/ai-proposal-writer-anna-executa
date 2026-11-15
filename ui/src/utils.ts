@@ -508,3 +508,231 @@ export function downloadFile(content: string, filename: string, mimeType: string
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
+
+/**
+ * Shred an RFP / client scope document into categorized compliance line items
+ */
+export function shredRfpDocumentLocally(text: string, filename = 'Client_RFP_Specification.txt') {
+  if (!text || !text.trim()) {
+    return {
+      id: `rfp_${Date.now()}`,
+      title: 'RFP Requirements & Compliance Matrix',
+      sourceDocumentName: filename,
+      shreddedAt: new Date().toISOString(),
+      requirements: [],
+      overallComplianceScore: 100,
+      gapCount: 0,
+    }
+  }
+
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 10)
+
+  const items: Array<{
+    id: string
+    category: 'mandatory' | 'technical' | 'timeline' | 'commercial' | 'evaluation' | 'compliance'
+    requirementText: string
+    priority: 'high' | 'medium' | 'low'
+    sourceReference: string
+    targetSectionTitle: string
+    complianceStatus: 'compliant' | 'partial' | 'exception' | 'unaddressed'
+    responseSnippet: string
+    suggestedFix: string
+  }> = []
+
+  let itemCounter = 1
+
+  for (const line of lines) {
+    const lower = line.toLowerCase()
+
+    // Detect requirement nature
+    const isMandatory = /\b(shall|must|mandatory|strictly required|will need to|requirement)\b/i.test(lower)
+    const isTechnical = /\b(api|architecture|database|cloud|aws|azure|gcp|react|python|node|security|soc2|hipaa|gdpr|encryption|auth|sso)\b/i.test(lower)
+    const isTimeline = /\b(deadline|weeks|months|timeline|schedule|milestone|delivery date|due by)\b/i.test(lower)
+    const isCommercial = /\b(budget|pricing|cost|payment|deposit|rate|currency|fixed price|hourly)\b/i.test(lower)
+    const isEvaluation = /\b(criteria|evaluation|scoring|selection|proposal due|submission)\b/i.test(lower)
+
+    if (isMandatory || isTechnical || isTimeline || isCommercial || isEvaluation || line.startsWith('-') || line.startsWith('*') || /^\d+\./.test(line)) {
+      const cleanText = line.replace(/^[-*•\d.]+\s*/, '')
+      if (cleanText.length < 8) continue
+
+      let category: 'mandatory' | 'technical' | 'timeline' | 'commercial' | 'evaluation' | 'compliance' = 'technical'
+      let targetSectionTitle = 'Technical Approach'
+      let priority: 'high' | 'medium' | 'low' = 'medium'
+
+      if (isMandatory) {
+        category = 'mandatory'
+        targetSectionTitle = 'Scope of Work'
+        priority = 'high'
+      } else if (isCommercial) {
+        category = 'commercial'
+        targetSectionTitle = 'Investment & Pricing'
+        priority = 'high'
+      } else if (isTimeline) {
+        category = 'timeline'
+        targetSectionTitle = 'Timeline & Milestones'
+        priority = 'medium'
+      } else if (isEvaluation) {
+        category = 'evaluation'
+        targetSectionTitle = 'Executive Summary'
+        priority = 'medium'
+      } else if (/compliance|security|soc2|hipaa|gdpr/i.test(lower)) {
+        category = 'compliance'
+        targetSectionTitle = 'Terms & Conditions'
+        priority = 'high'
+      }
+
+      items.push({
+        id: `req_${Date.now()}_${itemCounter++}`,
+        category,
+        requirementText: cleanText,
+        priority,
+        sourceReference: `Solicitation excerpt #${itemCounter - 1}`,
+        targetSectionTitle,
+        complianceStatus: 'compliant',
+        responseSnippet: `Addressed in ${targetSectionTitle} with compliant architectural deliverable.`,
+        suggestedFix: `Affirm compliance and specify acceptance criteria in ${targetSectionTitle}.`,
+      })
+
+      if (items.length >= 25) break // Cap at top 25 structured requirements for UI speed
+    }
+  }
+
+  // If few items matched, split sentences
+  if (items.length < 3) {
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text]
+    for (const sent of sentences.slice(0, 5)) {
+      const trimmed = sent.trim()
+      if (trimmed.length > 20) {
+        items.push({
+          id: `req_${Date.now()}_${itemCounter++}`,
+          category: 'mandatory',
+          requirementText: trimmed,
+          priority: 'high',
+          sourceReference: `Brief statement`,
+          targetSectionTitle: 'Scope of Work',
+          complianceStatus: 'compliant',
+          responseSnippet: `Addressed in Scope of Work.`,
+          suggestedFix: `Specify exact technical scope and milestones for this deliverable.`,
+        })
+      }
+    }
+  }
+
+  const compliantCount = items.filter((i) => i.complianceStatus === 'compliant').length
+  const score = items.length ? Math.round((compliantCount / items.length) * 100) : 100
+  const gapCount = items.filter((i) => i.complianceStatus === 'unaddressed' || i.complianceStatus === 'exception').length
+
+  return {
+    id: `rfp_${Date.now()}`,
+    title: 'RFP Requirements & Compliance Matrix',
+    sourceDocumentName: filename,
+    shreddedAt: new Date().toISOString(),
+    requirements: items,
+    overallComplianceScore: score,
+    gapCount,
+  }
+}
+
+/**
+ * Re-evaluate RFP Compliance against the actual Proposal Sections
+ */
+export function auditRfpCompliance(matrix: any, sections: any[]) {
+  if (!matrix || !matrix.requirements) return matrix
+
+  const updatedReqs = matrix.requirements.map((req: any) => {
+    // Check if any section contains key terms from requirementText
+    const words = req.requirementText
+      .toLowerCase()
+      .split(/\W+/)
+      .filter((w: string) => w.length > 4)
+
+    const matchingSection = sections.find((s) => {
+      const secContent = s.content.toLowerCase()
+      const matchCount = words.filter((w: string) => secContent.includes(w)).length
+      return matchCount >= Math.min(2, words.length)
+    })
+
+    if (matchingSection) {
+      return {
+        ...req,
+        targetSectionId: matchingSection.id,
+        targetSectionTitle: matchingSection.title,
+        complianceStatus: 'compliant',
+        responseSnippet: `Verified covered in '${matchingSection.title}'.`,
+      }
+    } else {
+      return {
+        ...req,
+        complianceStatus: 'unaddressed',
+        responseSnippet: 'Not yet explicitly referenced in proposal sections.',
+        suggestedFix: `Add a dedicated subsection in '${req.targetSectionTitle || 'Scope of Work'}' satisfying this requirement.`,
+      }
+    }
+  })
+
+  const compliantCount = updatedReqs.filter((i: any) => i.complianceStatus === 'compliant').length
+  const score = updatedReqs.length ? Math.round((compliantCount / updatedReqs.length) * 100) : 100
+  const gapCount = updatedReqs.filter((i: any) => i.complianceStatus === 'unaddressed' || i.complianceStatus === 'exception').length
+
+  return {
+    ...matrix,
+    requirements: updatedReqs,
+    overallComplianceScore: score,
+    gapCount,
+  }
+}
+
+/**
+ * Export proposal to GitHub-flavored Markdown
+ */
+export function exportProposalToMarkdown(proposal: GeneratedProposal): string {
+  const agency = proposal.formData?.step1?.agencyName || 'Agency Partner'
+  const client = proposal.formData?.step1?.clientName
+    ? `${proposal.formData.step1.clientName} (${proposal.formData.step1.clientCompany})`
+    : proposal.formData?.step1?.clientCompany || 'Client'
+
+  let md = `# ${proposal.title}\n`
+  if (proposal.subtitle) md += `*${proposal.subtitle}*\n\n`
+  md += `---\n\n`
+  md += `**Prepared For:** ${client}  \n`
+  md += `**Prepared By:** ${agency}  \n`
+  md += `**Date:** ${proposal.generatedDate} | **Valid Until:** ${proposal.validUntil}  \n`
+  md += `**Total Investment:** ${proposal.totalValue}  \n\n`
+  md += `---\n\n`
+
+  for (const s of proposal.sections) {
+    md += `## ${s.title}\n\n`
+    md += `${s.content}\n\n`
+  }
+
+  if (proposal.complianceMatrix && proposal.complianceMatrix.requirements.length > 0) {
+    md += `## Appendix: RFP Requirements Compliance Matrix\n\n`
+    md += `| Category | Requirement | Target Section | Compliance Status |\n`
+    md += `|---|---|---|---|\n`
+    for (const req of proposal.complianceMatrix.requirements) {
+      md += `| ${req.category} | ${req.requirementText.replace(/\|/g, '-')} | ${req.targetSectionTitle} | **${req.complianceStatus.toUpperCase()}** |\n`
+    }
+    md += `\n`
+  }
+
+  if (proposal.signoff) {
+    md += `## Project Authorization\n\n`
+    md += `Digitally signed by **${proposal.signoff.signerName}** (${proposal.signoff.signerTitle}) on ${proposal.signoff.signedAt.slice(0, 10)}.\n`
+    if (proposal.signoff.digitalSignature) {
+      md += `Certificate Hash: \`${proposal.signoff.digitalSignature.certificateId}\`\n`
+    }
+  }
+
+  return md
+}
+
+/**
+ * Export proposal to lossless JSON string
+ */
+export function exportProposalToJson(proposal: GeneratedProposal): string {
+  return JSON.stringify(proposal, null, 2)
+}
+

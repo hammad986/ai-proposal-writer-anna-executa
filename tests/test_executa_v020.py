@@ -33,6 +33,7 @@ class TestExecutaV020(unittest.TestCase):
         self.assertIn("audit_proposal", tool_names)
         self.assertIn("refine_text", tool_names)
         self.assertIn("extract_brief", tool_names)
+        self.assertIn("extract_rfp_matrix", tool_names)
         self.assertIn("compare_versions", tool_names)
         self.assertIn("calculate_roi", tool_names)
         self.assertIn("analyze_deal_health", tool_names)
@@ -223,6 +224,23 @@ class TestExecutaV020(unittest.TestCase):
         questions = res["data"]["questions"]
         self.assertEqual(len(questions), 5)
         self.assertTrue(any("KPI" in q["question"] for q in questions))
+
+    def test_extract_rfp_matrix(self):
+        sample_rfp = """
+        REQUEST FOR PROPOSAL: Banking Core Integration
+        The contractor SHALL implement biometric auth and 2FA.
+        The system MUST comply strictly with PCI-DSS and SOC2 standards.
+        Delivery window MUST NOT exceed 12 weeks.
+        Budget range is $50,000 fixed price.
+        """
+        res = plugin.invoke("extract_rfp_matrix", {"rfpText": sample_rfp, "sourceName": "Test_RFP.txt"}, {})
+        self.assertTrue(res.get("success"), f"extract_rfp_matrix failed: {res}")
+        matrix = res["data"]["matrix"]
+        self.assertEqual(matrix["sourceDocumentName"], "Test_RFP.txt")
+        self.assertTrue(len(matrix["requirements"]) >= 3)
+        self.assertGreaterEqual(matrix["overallComplianceScore"], 50)
+        categories = [r["category"] for r in matrix["requirements"]]
+        self.assertIn("mandatory", categories)
 
 
 if __name__ == "__main__":

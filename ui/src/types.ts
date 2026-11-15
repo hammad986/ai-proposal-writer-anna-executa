@@ -329,6 +329,38 @@ export interface DiscoveryQuestion {
   clientAnswer?: string
 }
 
+export interface RfpRequirement {
+  id: string
+  category: 'mandatory' | 'technical' | 'timeline' | 'commercial' | 'evaluation' | 'compliance'
+  requirementText: string
+  priority: 'high' | 'medium' | 'low'
+  sourceReference?: string
+  targetSectionId?: string
+  targetSectionTitle?: string
+  complianceStatus: 'compliant' | 'partial' | 'exception' | 'unaddressed'
+  responseSnippet?: string
+  suggestedFix?: string
+}
+
+export interface RfpComplianceMatrix {
+  id: string
+  title: string
+  sourceDocumentName: string
+  shreddedAt: string
+  requirements: RfpRequirement[]
+  overallComplianceScore: number // 0 - 100 percentage
+  gapCount: number
+}
+
+export interface CompanyKnowledgeAsset {
+  id: string
+  title: string
+  category: 'case_study' | 'credential' | 'team' | 'methodology' | 'legal_term' | 'security'
+  content: string
+  tags: string[]
+  createdAt: string
+}
+
 export interface GeneratedProposal {
   id: string
   formData: ProposalFormData
@@ -354,4 +386,6 @@ export interface GeneratedProposal {
   riskReport?: ContractRiskReport
   comments?: ProposalComment[]
   discoveryQuestions?: DiscoveryQuestion[]
+  complianceMatrix?: RfpComplianceMatrix
+  knowledgeAssetIds?: string[]
 }

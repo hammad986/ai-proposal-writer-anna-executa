@@ -9,11 +9,12 @@ import { FormStep4View } from '@/components/proposal/form-step-4'
 import { GeneratingView } from '@/components/proposal/generating-view'
 import { StepIndicator } from '@/components/proposal/step-indicator'
 import { BriefImporterModal } from '@/components/proposal/brief-importer-modal'
+import { RfpIntelligenceModal } from '@/components/proposal/rfp-intelligence-modal'
 import { TemplatePickerModal } from '@/components/proposal/template-picker'
 import { invokeExecutaTool } from '@/anna-bridge'
 import { emptyFormData, normalizeProposal } from '@/defaults'
 import { formatLocalDate, addDaysToIso, calculatePricingTotals, formatCurrency } from '@/utils'
-import type { GeneratedProposal, ProposalFormData, ProposalTemplate } from '@/types'
+import type { GeneratedProposal, ProposalFormData, ProposalTemplate, RfpComplianceMatrix } from '@/types'
 
 function mergeDraft(draft?: Partial<ProposalFormData>): ProposalFormData {
   return {
@@ -66,7 +67,9 @@ export function NewProposalView({
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [showBriefImporter, setShowBriefImporter] = useState(false)
+  const [showRfpShredder, setShowRfpShredder] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [attachedComplianceMatrix, setAttachedComplianceMatrix] = useState<RfpComplianceMatrix | null>(null)
   const lastSubmitted = useRef<ProposalFormData | null>(null)
 
   const stepTitles = [
@@ -153,6 +156,25 @@ export function NewProposalView({
     })
   }
 
+  const handleApplyRfpIntelligence = (extracted: {
+    step1Patch: any
+    step2Patch: any
+    step3Patch: any
+    complianceMatrix: RfpComplianceMatrix
+  }) => {
+    setAttachedComplianceMatrix(extracted.complianceMatrix)
+    setFormData((prev) => {
+      const updated: ProposalFormData = {
+        ...prev,
+        step1: { ...prev.step1, ...extracted.step1Patch },
+        step2: { ...prev.step2, ...extracted.step2Patch },
+        step3: { ...prev.step3, ...extracted.step3Patch },
+      }
+      onSaveDraft(updated)
+      return updated
+    })
+  }
+
   const handleNext = () => {
     const nextErrors = validateStep(currentStep, formData)
     setErrors(nextErrors)
@@ -217,6 +239,11 @@ export function NewProposalView({
         proposal.totalValue = formatCurrency(totals.grandTotal, data.step3.pricingStructure.currency)
       }
 
+      // Attach compliance matrix if shredded from RFP
+      if (attachedComplianceMatrix) {
+        proposal.complianceMatrix = attachedComplianceMatrix
+      }
+
       const elapsed = Date.now() - startTime
       const remaining = Math.max(0, 3000 - elapsed)
 
@@ -268,11 +295,22 @@ export function NewProposalView({
               size="sm"
               variant="outline"
               type="button"
+              onClick={() => setShowRfpShredder(true)}
+              className="text-xs bg-indigo-50/50 hover:bg-indigo-100/50 dark:bg-indigo-950/20 text-primary border-primary/30"
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1 text-primary" />
+              AI RFP Shredder 2.0
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
               onClick={() => setShowBriefImporter(true)}
               className="text-xs"
             >
               <Wand2 className="h-3.5 w-3.5 mr-1 text-primary" />
-              Import Brief / RFP
+              Paste Raw Brief
             </Button>
 
             <Button
@@ -359,6 +397,14 @@ export function NewProposalView({
       </main>
 
       {/* Modals */}
+      {showRfpShredder && (
+        <RfpIntelligenceModal
+          onExtractSuccess={handleApplyRfpIntelligence}
+          onClose={() => setShowRfpShredder(false)}
+          toast={toast}
+        />
+      )}
+
       {showBriefImporter && (
         <BriefImporterModal
           onExtractSuccess={handleApplyBriefExtraction}

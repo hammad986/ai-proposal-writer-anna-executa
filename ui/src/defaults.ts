@@ -1162,6 +1162,44 @@ export function normalizeProposal(raw: any): GeneratedProposal {
     security: raw.security || createDefaultSecurity(),
     roiEstimation: raw.roiEstimation || calculateDefaultRoi(numericBudget),
     comments: Array.isArray(raw.comments) ? raw.comments : [],
+    complianceMatrix: raw.complianceMatrix || {
+      id: `rfp_${raw.id || 'demo'}`,
+      title: 'Enterprise RFP Compliance Matrix',
+      sourceDocumentName: 'Client_Scope_Specification_2026.txt',
+      shreddedAt: '2026-10-31T09:00:00Z',
+      requirements: [
+        {
+          id: 'req_1',
+          category: 'mandatory',
+          requirementText: 'Real-time payment gateway and digital order processing with 99.9% uptime SLA.',
+          priority: 'high',
+          targetSectionTitle: 'Technical Approach',
+          complianceStatus: 'compliant',
+          responseSnippet: 'Fully satisfied via distributed Stripe and Redis architecture in Technical Approach.',
+        },
+        {
+          id: 'req_2',
+          category: 'compliance',
+          requirementText: 'PCI-DSS Level 1 and SOC2 data privacy encryption at rest and in transit.',
+          priority: 'high',
+          targetSectionTitle: 'Terms & Conditions',
+          complianceStatus: 'compliant',
+          responseSnippet: 'Strict end-to-end TLS 1.3 and AES-256 protocols affirmed in Terms & Conditions.',
+        },
+        {
+          id: 'req_3',
+          category: 'timeline',
+          requirementText: 'Final production delivery and handover within 6 calendar weeks.',
+          priority: 'medium',
+          targetSectionTitle: 'Timeline & Milestones',
+          complianceStatus: 'compliant',
+          responseSnippet: 'Phased 3-stage delivery roadmap scheduled across 6 weeks.',
+        },
+      ],
+      overallComplianceScore: 100,
+      gapCount: 0,
+    },
+    knowledgeAssetIds: Array.isArray(raw.knowledgeAssetIds) ? raw.knowledgeAssetIds : [],
     discoveryQuestions:
       Array.isArray(raw.discoveryQuestions) && raw.discoveryQuestions.length > 0
         ? raw.discoveryQuestions

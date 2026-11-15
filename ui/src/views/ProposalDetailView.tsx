@@ -48,8 +48,11 @@ import { ClientCommentsDrawer } from '@/components/proposal/client-comments-draw
 import { RoiCalculatorModal } from '@/components/proposal/roi-calculator-modal'
 import { FollowUpCadenceModal } from '@/components/proposal/followup-cadence-modal'
 import { CurrencyConverterModal } from '@/components/proposal/currency-converter-modal'
+import { RfpComplianceMatrixModal } from '@/components/proposal/rfp-compliance-matrix-modal'
+import { CompanyKnowledgeModal } from '@/components/proposal/company-knowledge-modal'
 import { invokeExecutaTool } from '@/anna-bridge'
 import { generateProposalPdf } from '@/pdf-generator'
+import { generateProposalDocx } from '@/docx-generator'
 import {
   calculatePricingTotals,
   formatCurrency,
@@ -103,6 +106,9 @@ export function ProposalDetailView({
   const [showRoiModal, setShowRoiModal] = useState(false)
   const [showFollowUpModal, setShowFollowUpModal] = useState(false)
   const [showCurrencyModal, setShowCurrencyModal] = useState(false)
+  const [showRfpComplianceModal, setShowRfpComplianceModal] = useState(false)
+  const [showKnowledgeModal, setShowKnowledgeModal] = useState(false)
+  const [isDocxGenerating, setIsDocxGenerating] = useState(false)
   const [newSectionTitle, setNewSectionTitle] = useState('')
   const [newSectionType, setNewSectionType] = useState<ProposalSection['type']>('text')
 
@@ -115,6 +121,30 @@ export function ProposalDetailView({
       toast.error('Failed to download PDF: ' + (e?.message || 'Unknown error'))
     } finally {
       setIsPdfGenerating(false)
+    }
+  }
+
+  const handleDownloadDocx = async () => {
+    setIsDocxGenerating(true)
+    try {
+      const blob = await generateProposalDocx(proposal)
+      const cleanFilename = (proposal.title || 'proposal')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${cleanFilename}.docx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success('Microsoft Word (.docx) proposal downloaded!')
+    } catch (e: any) {
+      toast.error('Failed to download DOCX: ' + (e?.message || 'Unknown error'))
+    } finally {
+      setIsDocxGenerating(false)
     }
   }
 
@@ -345,6 +375,35 @@ export function ProposalDetailView({
               )}
             </Button>
 
+            {/* RFP Requirements Compliance Matrix */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowRfpComplianceModal(true)}
+              title="RFP Requirements & Compliance Matrix"
+              className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-50/20"
+            >
+              <ShieldCheck className="h-4 w-4 mr-1.5" />
+              RFP Matrix
+              {proposal.complianceMatrix && (
+                <span className="ml-1.5 rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                  {proposal.complianceMatrix.overallComplianceScore}%
+                </span>
+              )}
+            </Button>
+
+            {/* Company Knowledge Base Grounder */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowKnowledgeModal(true)}
+              title="Company Knowledge Base & Context Grounder"
+              className="border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-50/20"
+            >
+              <BookOpen className="h-4 w-4 mr-1.5" />
+              Knowledge Base
+            </Button>
+
             {/* Client ROI & Financial Impact Calculator */}
             <Button
               size="sm"
@@ -503,6 +562,19 @@ export function ProposalDetailView({
             >
               <DollarSign className="h-4 w-4 mr-1.5" />
               {showPricingBuilder ? 'Hide Pricing' : 'Pricing Builder'}
+            </Button>
+
+            {/* Export Microsoft Word DOCX */}
+            <Button
+              size="sm"
+              variant="outline"
+              title="Download editable Microsoft Word .docx"
+              onClick={handleDownloadDocx}
+              disabled={isDocxGenerating}
+              className="text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-50/20"
+            >
+              <FileText className="h-3.5 w-3.5 mr-1" />
+              {isDocxGenerating ? 'Building Word...' : 'Word (.docx)'}
             </Button>
 
             {/* Export Markdown */}
@@ -933,6 +1005,26 @@ export function ProposalDetailView({
           onClose={() => setShowCurrencyModal(false)}
           proposal={proposal}
           onUpdateProposal={onUpdateProposal}
+          toast={toast}
+        />
+      )}
+
+      {/* RFP Requirements & Compliance Matrix Modal */}
+      {showRfpComplianceModal && (
+        <RfpComplianceMatrixModal
+          proposal={proposal}
+          onUpdateProposal={onUpdateProposal}
+          onClose={() => setShowRfpComplianceModal(false)}
+          toast={toast}
+        />
+      )}
+
+      {/* Company Knowledge Base Grounder Modal */}
+      {showKnowledgeModal && (
+        <CompanyKnowledgeModal
+          proposal={proposal}
+          onUpdateProposal={onUpdateProposal}
+          onClose={() => setShowKnowledgeModal(false)}
           toast={toast}
         />
       )}
