@@ -11,3 +11,4 @@ build-win/
 *.log
 .vite/
 
+node_modules

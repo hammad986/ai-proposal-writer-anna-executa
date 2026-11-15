@@ -52,18 +52,26 @@ select {
   color: hsl(var(--foreground));
 }
 
-/* Custom scrollbars for clean desktop appearance */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Modern W3C Standard Scrollbars (CSS Scrollbars Module Level 1 / Baseline) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(150, 150, 150, 0.35) transparent;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(150, 150, 150, 0.3);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(150, 150, 150, 0.5);
+
+/* Fallback for legacy WebKit/Blink browsers that do not yet support scrollbar-color */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(150, 150, 150, 0.3);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(150, 150, 150, 0.5);
+  }
 }
