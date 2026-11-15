@@ -3,7 +3,7 @@
 
 [![Anna Platform](https://img.shields.io/badge/Anna_Platform-Store_App_#319-indigo.svg)](https://anna.partners/store/@hammad/ai-proposal-writer-anna)
 [![Version](https://img.shields.io/badge/Version-3.0.0-blue.svg)](./manifest.json)
-[![Build Status](https://img.shields.io/badge/Tests-45%2F45_Passing-brightgreen.svg)](./tests)
+[![Build Status](https://img.shields.io/badge/Tests-46%2F46_Passing-brightgreen.svg)](./tests)
 [![Security & Privacy](https://img.shields.io/badge/Privacy-Zero_Data_Retention-success.svg)](./PRIVACY.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue.svg)](./tsconfig.json)
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](./ui/package.json)
