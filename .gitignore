@@ -9,4 +9,5 @@ build/
 build-win/
 *.spec
 *.log
+.vite/
 
