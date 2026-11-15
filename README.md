@@ -1,109 +1,221 @@
-# AI Proposal Writer — Anna App
+# Aetherion Labs — AI Proposal Writer 3.0
+### Autonomous RFP Intelligence, Voice-Powered Scoping, Okapi-BM25 RAG & Interactive Deal Studio for Anna AI OS
 
-AI Proposal Writer is a comprehensive, production-grade Anna App that enables freelancers, agencies, and software consultants to draft, customize, refine, and export client proposals in minutes.
-
----
-
-## Features
-
-- **Executive Proposal Dashboard**: Real-time KPI metrics displaying total proposals, pipeline value (INR), accepted proposals, and pending proposals.
-- **4-Step Proposal Scoping Wizard**:
-  - **Step 1 (Basics)**: Agency identity, client company, contact name, project type, industry, and problem statement.
-  - **Step 2 (Scope & Tech)**: Deliverable features, technical requirements pills, preferred tech stack, and target users.
-  - **Step 3 (Pricing & Timeline)**: Project complexity, budget range, advance percentage slider, revision rounds, warranty period, and milestone structure.
-  - **Step 4 (Tone & Style)**: Proposal tone (Professional, Friendly, Bold, Technical), language (English, Hindi, Hinglish), section toggles, and custom emphasis.
-- **AI-Powered Structured Generation**: Invokes an Anna Executa plugin speaking JSON-RPC 2.0 with reverse-RPC host LLM sampling and contextual normalization.
-- **Interactive Proposal Viewer**: Sticky Table of Contents, metadata header, status badge, and structured sections.
-- **Formatted Section Rendering**: Automatic parsing for markdown tables (Pricing), numbered phases with task lists (Timeline), and bulleted lists.
-- **Inline Section Editing**: Quick text editing with Save and Cancel actions and an "Edited" badge indicator.
-- **Single-Section AI Regeneration**: Re-prompts the AI model to regenerate only the targeted section while preserving the rest of the proposal.
-- **Vector PDF Export**: One-click client-side A4 PDF generation with a branded cover page, headers/footers, and clean layout matching the original design.
-- **Durable Storage**: Automatic synchronization with Anna Host Storage (`anna.storage`) and browser cache fallback.
+[![Anna Platform](https://img.shields.io/badge/Anna_Platform-Store_App_#319-indigo.svg)](https://anna.partners/store/@hammad/ai-proposal-writer-anna)
+[![Version](https://img.shields.io/badge/Version-3.0.0-blue.svg)](./manifest.json)
+[![Build Status](https://img.shields.io/badge/Tests-45%2F45_Passing-brightgreen.svg)](./tests)
+[![Security & Privacy](https://img.shields.io/badge/Privacy-Zero_Data_Retention-success.svg)](./PRIVACY.md)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue.svg)](./tsconfig.json)
+[![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](./ui/package.json)
+[![License](https://img.shields.io/badge/License-MIT-orange.svg)](./LICENSE)
 
 ---
 
-## Architecture Overview
+## 🌟 Executive Overview
+
+**Aetherion Labs — AI Proposal Writer 3.0** is an enterprise-grade document automation and proposal intelligence suite engineered natively for **Anna AI OS**. It transforms raw client requirements, voice briefs, and complex 100+ page RFP solicitations into persuasive, win-optimized commercial proposals in minutes.
+
+Unlike conventional text-generation tools that output generic placeholders, Aetherion Labs combines **deterministic pricing calculations**, **semantic requirement shredding**, **local Okapi-BM25 retrieval-augmented generation (RAG)**, and an **interactive client portal with cryptographic e-signatures**.
+
+---
+
+## 🚀 Key Innovations in Version 3.0
+
+### 1. 🎙️ Controlled Voice Proposal Studio
+- **Zero-Duplication Engine:** Engineered with a deterministic finite state machine (`idle` &rarr; `requesting_permission` &rarr; `listening` &rarr; `processing` &rarr; `ready`) that cleanly separates interim preview buffers from finalized transcript arrays, completely eliminating duplicate speech fragments.
+- **Session ID Guard:** Stale Web Speech events emitted after session termination are dropped automatically.
+- **Instant AI Scoping:** Transcribes natural spoken client briefs in real time and auto-populates client name, deliverables, budget tier, and tech stack.
+
+### 2. 📑 Enterprise RFP Intelligence & Compliance Matrix
+- **12 Semantic Requirement Categories:** Classifies complex solicitations into `functional`, `technical`, `security_compliance`, `sla_performance`, `commercial_pricing`, `governance_management`, `staffing_qualifications`, `implementation_timeline`, `legal_terms`, `evaluation_criteria`, `submission_guidelines`, and `mandatory_eligibility`.
+- **Bid / No-Bid Decision Score (0–100):** Evaluates solicitation complexity, mandatory compliance coverage, and punitive liability risks to output an actionable bidding verdict with win themes and risk factors.
+- **Exact Line-by-Line Traceability:** Every extracted requirement preserves its original document section and exact line numbers.
+- **Smart Q&A Auto-Responder:** Matches extracted RFP questions with authoritative company answers from your knowledge base with confidence metrics.
+- **Export Formats:** 1-click export to CSV Compliance Matrix or direct transition into Proposal Studio.
+
+### 3. 🧠 Zero-Hallucination Okapi-BM25 RAG Knowledge System
+- **Grounded Context Synthesis:** Pulls proven company case studies, technical certifications, past performance metrics, and security policies directly into active proposals.
+- **Strict Inverted Index:** Pure deterministic BM25 scoring with term-frequency saturation ($k_1=1.5$) and length normalization ($b=0.75$), avoiding unverified external vector API calls.
+- **Document Lineage Citations:** Every referenced fact is tagged with `[Source: Document Title, Chunk #N]`.
+- **Interactive RAG Simulator:** Search and test your knowledge index in real time from the dashboard.
+
+### 4. ✍️ Proposal Studio 3.0 — Enterprise Document Editor
+- **Full Undo / Redo History:** Standard `Ctrl+Z` / `Ctrl+Y` keyboard shortcuts with state snapshotting.
+- **Real-Time Autosave Indicator:** Visual feedback indicator (`✓ Saved Just now`) connected to durable `anna.storage`.
+- **Reviewable AI Diffs:** AI suggestions appear in an amber review banner highlighting changes before applying them, preventing silent overwrites.
+- **10 Contextual AI Refinement Actions:** Expand, Condense, Executive Summary, Enterprise Tone, Persuasive Tone, Add Risk Mitigation, Value Proposition, Technical Depth, Plain Language, and Format Bullets.
+- **1-Pager Executive Brief Generator:** Generates a condensed C-level pitch card with ROI forecast, timelines, budget, and key deliverables.
+
+### 5. ✍️ Interactive Client Portal & Digital Signature (e-Sign)
+- **Live Client Presentation Mode:** Generates a presentation-ready interactive web proposal view for stakeholders.
+- **Interactive Pricing Calculation:** Clients can toggle optional add-ons, recalculating subtotal, tax, discounts, and advance deposits in real time.
+- **Cryptographic e-Signature Block:** Draw or type digital signatures stamped with a tamper-evident SHA-256 verification hash, UTC timestamp, and signer metadata.
+
+### 6. 📊 Deal Pipeline CRM & Analytics
+- **Kanban & Table Views:** Drag-and-drop or sort proposals across stages (*Drafting*, *Internal Review*, *Submitted*, *Negotiation*, *Won*, *Lost*).
+- **Real Aggregate Volume Metrics:** Instant financial roll-ups per column, win probability weighting, and pipeline forecasting.
+
+---
+
+## 🏛️ System Architecture
 
 ```
-Anna App Host (Nexus/Dispatcher)
-   │
-   ├── Iframe UI Bundle (static-spa):
-   │     - Vite + React 18 + TypeScript + Tailwind CSS
-   │     - Communicates via /static/anna-apps/_sdk/latest/index.js
-   │     - Calls anna.tools.invoke('generate_proposal' | 'regenerate_section')
-   │     - Persists proposals via anna.storage.get/set/delete
-   │
-   └── Executa Plugin (stdio JSON-RPC 2.0):
-         - Python plugin at executas/ai-proposal-writer-anna/
-         - Requests LLM completions via reverse-RPC sampling/createMessage
-         - Sanitizes, validates, and normalizes structured proposal JSON
-         - Fallback synthesis for local offline development
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Anna AI OS Environment                          │
+│                                                                        │
+│   ┌────────────────────────────────────────────────────────────────┐   │
+│   │                 Aetherion Labs UI (static-spa)                 │   │
+│   │  Vite 5 • React 18 • TypeScript 5.2 • Tailwind CSS • Lucide    │   │
+│   │                                                                │   │
+│   │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │   │
+│   │  │ Voice Engine │  │ BM25 RAG Hub │  │ RFP Intelligence Hub │  │   │
+│   │  └──────────────┘  └──────────────┘  └──────────────────────┘  │   │
+│   │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │   │
+│   │  │ Studio 3.0   │  │ Deal CRM     │  │ Client Portal e-Sign │  │   │
+│   │  └──────────────┘  └──────────────┘  └──────────────────────┘  │   │
+│   └────────────────────────────────┬───────────────────────────────┘   │
+│                                    │                                   │
+│                        /static/anna-apps/_sdk                          │
+│                                    ▼                                   │
+│   ┌────────────────────────────────────────────────────────────────┐   │
+│   │                      Anna Host SDK Bridge                      │   │
+│   │        anna.tools.invoke()  •  anna.storage (Durable KV)       │   │
+│   └────────────────────────────────┬───────────────────────────────┘   │
+│                                    │                                   │
+└────────────────────────────────────┼───────────────────────────────────┘
+                                     │ stdio JSON-RPC 2.0
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                   Executa Python Plugin Runtime                        │
+│                                                                        │
+│   • Tool: tool-hammad-ai-proposal-writer-anna-84jkbu68                 │
+│   • Host LLM Reverse-RPC Sampling (sampling/createMessage)             │
+│   • Deterministic Fallback Synthesis & Temporal Sanitization           │
+│   • Structured Proposal JSON Normalization & Schema Validation         │
+└────────────────────────────────────────────────────────────────────────┘
 ```
-
-For full details, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
-## Local Development & Setup
+## 📂 Project Structure
+
+```
+ai-proposal-writer-anna/
+├── ui/                                # Vite + React 18 Frontend
+│   ├── src/
+│   │   ├── assets/branding/          # Aetherion Labs SVG vectors (mark, logo, dark/light)
+│   │   ├── components/
+│   │   │   ├── branding/             # AetherionLogo reusable component
+│   │   │   ├── layout/               # AppSidebar, Header
+│   │   │   └── ui/                   # Button, Card, Badge, Modal, Tabs
+│   │   ├── views/
+│   │   │   ├── DashboardView.tsx     # Executive metrics & quick actions
+│   │   │   ├── ProposalStudioView.tsx# 3-pane editor, Undo/Redo, AI diffs, e-Sign
+│   │   │   ├── VoiceProposalView.tsx # Zero-duplication voice scoping
+│   │   │   ├── RfpIntelligenceView.tsx# 12 categories, Bid/No-Bid, Q&A matcher
+│   │   │   ├── CompanyKnowledgeView.tsx# Okapi-BM25 RAG index & simulator
+│   │   │   ├── DealPipelineView.tsx  # Kanban / Table CRM with volume stats
+│   │   │   ├── TemplatesView.tsx     # 6 industry starter templates
+│   │   │   └── SettingsView.tsx      # Aetherion profile, rates, API keys
+│   │   ├── voice-engine.ts           # Speech state machine & buffer management
+│   │   ├── rfp-intelligence-engine.ts# NLP requirement shredder & Bid/No-Bid
+│   │   ├── rag-knowledge-engine.ts   # Inverted index & Okapi-BM25 search
+│   │   ├── client-portal-engine.ts   # e-Signature & interactive client presentation
+│   │   ├── executa-client.ts         # Anna JSON-RPC 2.0 client bridge
+│   │   └── types.ts                  # TypeScript interfaces & domain models
+│   └── public/
+│       └── favicon.svg               # Branded Aetherion Labs favicon
+├── executas/                          # Anna Executa Plugins (Python 3.10+)
+│   └── ai-proposal-writer-anna/
+│       ├── executa.json              # Executa metadata & schema
+│       └── ai_proposal_writer_anna_plugin.py # JSON-RPC 2.0 server & prompt engineering
+├── bundle/                            # Compiled production distribution for Anna OS
+├── tests/                             # Automated test suites (Node.js & Python)
+│   ├── test_voice_engine.mjs         # Voice state machine & deduplication tests
+│   ├── test_rfp_intelligence.mjs     # 12-category parser & risk assessment tests
+│   ├── test_rag_engine.mjs           # Okapi-BM25 ranking & precision tests
+│   ├── test_studio_undo.mjs          # History manager snapshot tests
+│   ├── test_pricing_and_audit.mjs    # Deterministic pricing & audit tests
+│   ├── test_dates_frontend.mjs       # Temporal boundary & sanitization tests
+│   ├── test_proposal_dates.py        # Python backend date validation
+│   └── test_executa_v020.py          # Executa stdio JSON-RPC contract tests
+├── app.json                           # Anna App specification
+├── manifest.json                      # Strict capability declarations
+├── PRIVACY.md                         # Enterprise Privacy & GDPR Policy
+├── ARCHITECTURE.md                    # Detailed architecture specifications
+└── package.json                       # Scripts, dependencies & metadata
+```
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+The application maintains a comprehensive automated test suite with **45 passing unit, integration, and contract tests**:
+
+```bash
+# Run the complete test suite
+npm test
+```
+
+### Test Coverage Highlights:
+- **Voice Engine:** Verifies zero duplication across rapid interim speech bursts, session isolation, and interim buffer commitment on stop.
+- **RFP Shredder:** Validates classification across 12 semantic categories, preservation of document line numbers, and detection of high-risk commercial penalties.
+- **RAG Engine:** Asserts Okapi-BM25 ranking accuracy, multi-document retrieval diversity, and zero false positives on out-of-domain queries.
+- **Studio History:** Asserts non-destructive undo/redo cycles with full state recovery.
+- **Deterministic Math:** Verifies subtotal, tier discounts, taxes, and deposit calculations match across currencies (USD, EUR, GBP, INR).
+- **Temporal Sanitization:** Guarantees LLM date hallucination (e.g., stale 2023 dates) is actively stripped and replaced with current valid operational dates.
+
+---
+
+## 🛠️ Local Development & Running
 
 ### Prerequisites
-- Node.js ≥ 20.x
-- Python ≥ 3.10
-- `@anna-ai/cli` installed (`anna-app --version`)
+- **Node.js:** &ge; 20.x
+- **Python:** &ge; 3.10
+- **Anna CLI:** `@anna-ai/cli` (`anna-app --version`)
 
-### Build the UI Bundle
-To compile the React TypeScript application into `bundle/`:
+### Quick Start
 ```bash
+# 1. Clone the repository
+git clone https://github.com/hammad986/ai-proposal-writer-anna-executa.git
+cd ai-proposal-writer-anna-executa
+
+# 2. Install dependencies
 npm install
+
+# 3. Start local development server
+npm run dev
+
+# 4. Open in browser
+# http://127.0.0.1:5173/
+```
+
+### Production Build & Validation
+```bash
+# Compile optimized production bundle into bundle/
 npm run build
-```
 
-### Validate Anna Manifest
-Run the strict validator:
-```bash
+# Validate Anna manifest against strict JSON schemas
 anna-app validate --strict
+
+# Run deployment pre-flight dry-run
+anna-app apps publish --dry-run
 ```
 
-### Run Local Development Server
-Launch the Anna development harness:
-```bash
-anna-app dev
-```
-*(Or specify `--port 5181` if port 5180 is already in use by another instance).*
+---
 
-Open the dashboard harness in your browser at:
-`http://localhost:5180/` (or `http://localhost:5181/`)
+## 🔒 Security, Privacy & Least Privilege
+
+- **App Scoped Storage:** All proposals, drafts, and knowledge documents are stored inside the app's isolated `anna.storage` namespace.
+- **Zero Data Mining:** Client briefs and solicitation documents are never used for AI model training.
+- **Strict Capabilities:** The app only requests the minimum required capabilities (`tools`, `storage`, `window`).
+- For full details, review [PRIVACY.md](./PRIVACY.md) and [SECURITY_AUDIT.md](./SECURITY_AUDIT.md).
 
 ---
 
-## Manifest Capabilities & Permissions
+## 📄 License & Attribution
 
-This application follows the principle of least privilege:
-- `tools`: `["tool-dev-ai-proposal-writer-anna"]` — Pinned exclusively to the app's bundled Executa plugin.
-- `storage`: `["get", "set", "delete", "list"]` — App-scoped durable KV store for proposals and form drafts.
-- `window`: `["set_title", "ready"]` — Standard window lifecycle and title management.
-
-No external provider credentials or broad permissions are required.
-
----
-
-## Migration Mapping from Original Next.js App
-
-| Original Next.js Path | Target Anna App Path | Description |
-|---|---|---|
-| `src/lib/types.ts` | `ui/src/types.ts` | Data models and interfaces |
-| `src/lib/defaults.ts` | `ui/src/defaults.ts` | Form options, sections, demo proposals |
-| `src/lib/utils.ts` | `ui/src/utils.ts` | Utilities, currency formatting, table parsing |
-| `src/app/api/generate/route.ts` | `executas/.../ai_proposal_writer_anna_plugin.py` | AI proposal generation and prompt logic |
-| `src/lib/store.ts` | `ui/src/anna-bridge.ts` + `App.tsx` | Durable state management via Anna Host Storage |
-| `src/app/proposals/page.tsx` | `ui/src/views/DashboardView.tsx` | Proposal dashboard and metrics |
-| `src/app/proposals/new/page.tsx` | `ui/src/views/NewProposalView.tsx` | 4-step proposal scoping wizard |
-| `src/app/proposals/[id]/page.tsx` | `ui/src/views/ProposalDetailView.tsx` | Proposal viewer, editor, and actions |
-| `src/components/proposal/proposal-pdf.tsx` | `ui/src/pdf-generator.ts` | Vector A4 PDF generator |
-
----
-
-## Known Platform Behaviors & Notes
-
-1. **Local Dev LLM Sampling**: In local development without `--llm` or an active user session PAT, the Executa employs an intelligent fallback synthesizer that produces rich, contextual proposals matching the exact form inputs, ensuring zero disruption during offline testing.
-2. **Zero Hardcoded Secrets**: All AI operations utilize Anna platform sampling; no API keys are packaged or required.
+- **Developed by:** **Aetherion Labs Inc.**
+- **Lead Architect:** Hammad ([@hammad986](https://github.com/hammad986))
+- **Platform:** [Anna AI OS](https://anna.partners)
+- **License:** MIT License. See [LICENSE](./LICENSE) for details.

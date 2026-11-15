@@ -40,6 +40,53 @@ export interface GroundedContext {
   citations: Array<{ id: string; title: string; category: string; snippet: string }>
 }
 
+export const DEFAULT_KNOWLEDGE_DOCUMENTS: KnowledgeDocument[] = [
+  {
+    id: 'k_1',
+    title: 'Enterprise Fintech Mobile App Case Study',
+    category: 'case_study',
+    tags: ['Fintech', 'React Native', 'AWS', 'Security'],
+    rawContent:
+      'Aetherion Labs engineered a high-throughput mobile trading platform for Apex Global handling $45M+ in monthly transaction volume with sub-100ms WebSocket price streaming and 99.99% uptime.\n\nThe system includes automated portfolio rebalancing, multi-broker FIX protocol order routing, and biometric authentication for zero-trust customer access.',
+    sourceType: 'manual',
+    createdAt: '2026-10-15',
+    updatedAt: '2026-10-15',
+  },
+  {
+    id: 'k_2',
+    title: 'SOC2 Type II & HIPAA Security Architecture',
+    category: 'security',
+    tags: ['Security', 'SOC2', 'HIPAA', 'Encryption'],
+    rawContent:
+      'All systems engineered by Aetherion Labs enforce TLS 1.3 in transit, AES-256 for persistent databases, automated vulnerability scanning in GitHub Actions CI/CD pipelines, and audited role-based access control (RBAC).\n\nCustomer data isolation is enforced at the PostgreSQL schema layer with encrypted cryptographic tenant keys rotated every 90 days.',
+    sourceType: 'manual',
+    createdAt: '2026-10-20',
+    updatedAt: '2026-10-20',
+  },
+  {
+    id: 'k_3',
+    title: 'Senior Engineering Team Squad Profile',
+    category: 'team',
+    tags: ['Team', 'DevOps', 'Architecture', 'AI'],
+    rawContent:
+      'Our core development squad includes 1 Principal Architect with 12+ years experience in distributed cloud systems, 2 Senior Full-Stack Engineers, 1 AI/ML Systems Specialist with LLM fine-tuning experience, and 1 Certified AWS Cloud Solutions Architect.\n\nAll engineers are full-time dedicated employees operating in unified sprint cadences with daily standups.',
+    sourceType: 'manual',
+    createdAt: '2026-11-01',
+    updatedAt: '2026-11-01',
+  },
+  {
+    id: 'k_4',
+    title: 'Intellectual Property Transfer & 60-Day Warranty Term',
+    category: 'legal_term',
+    tags: ['Legal', 'IP', 'Warranty'],
+    rawContent:
+      'Full, unrestricted intellectual property ownership of all custom software, repositories, and design assets transfers permanently to the Client upon final milestone payment receipt.\n\nAetherion Labs includes an industry-leading 60-day post-launch warranty covering all defect remediation, bug fixes, and performance tuning at zero additional cost.',
+    sourceType: 'manual',
+    createdAt: '2026-11-05',
+    updatedAt: '2026-11-05',
+  },
+]
+
 // Stop words for high-accuracy token filtering
 const STOP_WORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he',

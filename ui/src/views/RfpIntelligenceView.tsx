@@ -22,9 +22,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   analyzeRfpDocument,
+  autoAnswerRfpRequirements,
   type ComprehensiveRfpMatrix,
   type TraceableRfpRequirement,
   type RfpComplianceStatus,
+  type AutoAnsweredQAResult,
 } from '@/rfp-intelligence-engine'
 import { downloadFile, formatLocalDate, addDaysToIso } from '@/utils'
 import type { GeneratedProposal, ProposalFormData } from '@/types'
@@ -49,7 +51,10 @@ export function RfpIntelligenceView({
   const [rfpText, setRfpText] = useState('')
   const [sourceName, setSourceName] = useState('Enterprise_RFP.txt')
   const [isShredding, setIsShredding] = useState(false)
+  const [isAutoAnswering, setIsAutoAnswering] = useState(false)
   const [matrix, setMatrix] = useState<ComprehensiveRfpMatrix | null>(null)
+  const [activeTab, setActiveTab] = useState<'traceability' | 'qa_responder' | 'risks'>('traceability')
+  const [qaResults, setQaResults] = useState<AutoAnsweredQAResult[]>([])
   const [selectedReq, setSelectedReq] = useState<TraceableRfpRequirement | null>(null)
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -87,6 +92,24 @@ export function RfpIntelligenceView({
         setIsShredding(false)
       }
     }, 400)
+  }
+
+  const handleAutoAnswerRfp = () => {
+    if (!matrix) return
+    setIsAutoAnswering(true)
+    setTimeout(() => {
+      try {
+        const { updatedMatrix, qaResults: newQa } = autoAnswerRfpRequirements(matrix)
+        setMatrix(updatedMatrix)
+        setQaResults(newQa)
+        setActiveTab('qa_responder')
+        toast.success(`✨ Auto-answered ${newQa.length} RFP questions grounded with Knowledge Base citations!`)
+      } catch (err: any) {
+        toast.error('Auto-answer failed: ' + (err?.message || 'Unknown error'))
+      } finally {
+        setIsAutoAnswering(false)
+      }
+    }, 450)
   }
 
   const handleExportCsv = () => {
@@ -270,7 +293,26 @@ export function RfpIntelligenceView({
         </div>
 
         {matrix && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleAutoAnswerRfp}
+              disabled={isAutoAnswering}
+              className="gap-1.5 text-xs font-bold text-primary border-primary/30 hover:bg-primary/10 cursor-pointer shadow-xs"
+            >
+              {isAutoAnswering ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Auto-Answering with RAG...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Auto-Answer with RAG
+                </>
+              )}
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -411,114 +453,288 @@ export function RfpIntelligenceView({
             </Card>
           </div>
 
-          {/* Clarification Questions Panel */}
-          {matrix.assessment.clarificationQuestions.length > 0 && (
-            <Card className="border border-blue-500/30 bg-blue-500/5 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-300">
-                <HelpCircle className="h-4 w-4" />
-                <span>Recommended Clarification Questions for Procurement Contact:</span>
+          {/* Tab Navigation */}
+          <div className="flex border-b border-border text-xs font-bold gap-2">
+            <button
+              onClick={() => setActiveTab('traceability')}
+              className={`pb-2.5 px-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'traceability'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <FileCheck className="h-4 w-4" />
+              Traceability Matrix ({filteredRequirements.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('qa_responder')}
+              className={`pb-2.5 px-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'qa_responder'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Sparkles className="h-4 w-4 text-primary" />
+              Smart Q&amp;A Auto-Responder ({qaResults.length > 0 ? qaResults.length : matrix.requirements.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('risks')}
+              className={`pb-2.5 px-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'risks'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Bidding Risks &amp; Clarifications
+            </button>
+          </div>
+
+          {/* TAB 1: Traceability Matrix Table */}
+          {activeTab === 'traceability' && (
+            <Card className="border shadow-md overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-foreground">
+                    Traceable Requirements &amp; Compliance Matrix ({filteredRequirements.length})
+                  </h3>
+                </div>
+
+                {/* Category Filter */}
+                <div className="flex items-center gap-2 text-xs">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                  <select
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    className="rounded-lg border bg-background px-2.5 py-1 text-xs font-semibold text-foreground focus:outline-none"
+                  >
+                    <option value="all">All Categories ({matrix.requirements.length})</option>
+                    <option value="mandatory">Mandatory</option>
+                    <option value="security">Security</option>
+                    <option value="timeline">Timeline</option>
+                    <option value="commercial">Commercial</option>
+                    <option value="functional">Functional</option>
+                    <option value="integration">Integration</option>
+                    <option value="deliverables">Deliverables</option>
+                  </select>
+                </div>
               </div>
-              <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
-                {matrix.assessment.clarificationQuestions.map((q, idx) => (
-                  <li key={idx}>{q}</li>
-                ))}
-              </ul>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b bg-muted/30 text-muted-foreground font-semibold">
+                    <tr>
+                      <th className="py-2.5 px-3">Approve</th>
+                      <th className="py-2.5 px-3">Code</th>
+                      <th className="py-2.5 px-3">Category</th>
+                      <th className="py-2.5 px-3">Requirement &amp; Source Location</th>
+                      <th className="py-2.5 px-3">Compliance Status</th>
+                      <th className="py-2.5 px-3">Proposed Commitment</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {filteredRequirements.map((req) => (
+                      <tr
+                        key={req.id}
+                        className={`hover:bg-muted/10 transition ${
+                          !req.isApproved ? 'opacity-40 line-through' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-3">
+                          <input
+                            type="checkbox"
+                            checked={req.isApproved}
+                            onChange={() => handleToggleApproval(req.id)}
+                            className="h-4 w-4 rounded text-primary cursor-pointer"
+                          />
+                        </td>
+                        <td className="py-3 px-3 font-mono font-bold text-primary">{req.code}</td>
+                        <td className="py-3 px-3">
+                          <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            {req.category}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 max-w-md">
+                          <p className="font-medium text-foreground">{req.requirementText}</p>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            Source: {req.sourceSection} (Line {req.sourceLine})
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <select
+                            value={req.complianceStatus}
+                            onChange={(e) =>
+                              handleUpdateRequirementStatus(req.id, e.target.value as RfpComplianceStatus)
+                            }
+                            className="rounded-lg border bg-background px-2 py-1 text-[11px] font-semibold text-foreground focus:outline-none"
+                          >
+                            <option value="addressed_with_evidence">Addressed with Evidence</option>
+                            <option value="partially_addressed">Partially Addressed</option>
+                            <option value="requires_clarification">Requires Clarification</option>
+                            <option value="not_addressed">Not Addressed</option>
+                            <option value="not_applicable">Not Applicable</option>
+                          </select>
+                        </td>
+                        <td className="py-3 px-3 text-muted-foreground text-[11px] max-w-xs truncate">
+                          {req.evidenceOrResponse || 'Direct commitment in proposal'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           )}
 
-          {/* Interactive Compliance Matrix Table */}
-          <Card className="border shadow-md overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b bg-muted/20 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-foreground">
-                  Traceable Requirements &amp; Compliance Matrix ({filteredRequirements.length})
-                </h3>
-              </div>
-
-              {/* Category Filter */}
-              <div className="flex items-center gap-2 text-xs">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="rounded-lg border bg-background px-2.5 py-1 text-xs font-semibold text-foreground focus:outline-none"
-                >
-                  <option value="all">All Categories ({matrix.requirements.length})</option>
-                  <option value="mandatory">Mandatory</option>
-                  <option value="security">Security</option>
-                  <option value="timeline">Timeline</option>
-                  <option value="commercial">Commercial</option>
-                  <option value="functional">Functional</option>
-                  <option value="integration">Integration</option>
-                  <option value="deliverables">Deliverables</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b bg-muted/30 text-muted-foreground font-semibold">
-                  <tr>
-                    <th className="py-2.5 px-3">Approve</th>
-                    <th className="py-2.5 px-3">Code</th>
-                    <th className="py-2.5 px-3">Category</th>
-                    <th className="py-2.5 px-3">Requirement &amp; Source Location</th>
-                    <th className="py-2.5 px-3">Compliance Status</th>
-                    <th className="py-2.5 px-3">Proposed Commitment</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredRequirements.map((req) => (
-                    <tr
-                      key={req.id}
-                      className={`hover:bg-muted/10 transition ${
-                        !req.isApproved ? 'opacity-40 line-through' : ''
-                      }`}
+          {/* TAB 2: Smart Q&A Auto-Responder */}
+          {activeTab === 'qa_responder' && (
+            <div className="space-y-4">
+              {qaResults.length === 0 ? (
+                <Card className="p-8 text-center border-dashed border-2 bg-muted/10 space-y-4">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-1">
+                    <h3 className="text-base font-bold text-foreground">
+                      Auto-Answer RFP Questions with Verified Knowledge
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Match every extracted RFP requirement against Aetherion Labs corporate knowledge base using Okapi-BM25 retrieval to generate verifiable answers with exact citations.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleAutoAnswerRfp}
+                    disabled={isAutoAnswering}
+                    className="gap-2 font-bold cursor-pointer"
+                  >
+                    {isAutoAnswering ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating Grounded Answers...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        ⚡ Run Auto-Answer on All {matrix.requirements.length} Requirements
+                      </>
+                    )}
+                  </Button>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl p-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">
+                        {qaResults.length} Verified RFP Responses Grounded
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        All responses include source document citations and have been auto-injected into the active compliance matrix.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const updated = matrix.requirements.map((r) => ({ ...r, isApproved: true }))
+                        setMatrix({ ...matrix, requirements: updated })
+                        toast.success('All Q&A responses approved!')
+                      }}
+                      className="text-xs font-semibold gap-1.5"
                     >
-                      <td className="py-3 px-3">
-                        <input
-                          type="checkbox"
-                          checked={req.isApproved}
-                          onChange={() => handleToggleApproval(req.id)}
-                          className="h-4 w-4 rounded text-primary cursor-pointer"
-                        />
-                      </td>
-                      <td className="py-3 px-3 font-mono font-bold text-primary">{req.code}</td>
-                      <td className="py-3 px-3">
-                        <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                          {req.category}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 max-w-md">
-                        <p className="font-medium text-foreground">{req.requirementText}</p>
-                        <span className="text-[10px] text-muted-foreground font-mono">
-                          Source: {req.sourceSection} (Line {req.sourceLine})
-                        </span>
-                      </td>
-                      <td className="py-3 px-3">
-                        <select
-                          value={req.complianceStatus}
-                          onChange={(e) =>
-                            handleUpdateRequirementStatus(req.id, e.target.value as RfpComplianceStatus)
-                          }
-                          className="rounded-lg border bg-background px-2 py-1 text-[11px] font-semibold text-foreground focus:outline-none"
-                        >
-                          <option value="addressed_with_evidence">Addressed with Evidence</option>
-                          <option value="partially_addressed">Partially Addressed</option>
-                          <option value="requires_clarification">Requires Clarification</option>
-                          <option value="not_addressed">Not Addressed</option>
-                          <option value="not_applicable">Not Applicable</option>
-                        </select>
-                      </td>
-                      <td className="py-3 px-3 text-muted-foreground text-[11px] max-w-xs truncate">
-                        {req.evidenceOrResponse || 'Direct commitment in proposal'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      <Check className="h-3.5 w-3.5" /> Approve All Responses
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {qaResults.map((qa) => (
+                      <Card key={qa.requirementId} className="border p-4 bg-card shadow-xs space-y-3">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-primary">{qa.code}</span>
+                            <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              {qa.category}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            {qa.confidenceScore}% Confidence
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Solicitation Requirement:
+                          </label>
+                          <p className="text-xs font-medium text-foreground mt-0.5 leading-snug">
+                            {qa.questionText}
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg border bg-muted/15 p-2.5 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                              Grounded Aetherion Commitment:
+                            </label>
+                            <span className="text-[9px] font-mono text-muted-foreground">
+                              {qa.citationLabel}
+                            </span>
+                          </div>
+                          <p className="text-xs text-foreground leading-relaxed">
+                            {qa.answerText}
+                          </p>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </Card>
+          )}
+
+          {/* TAB 3: Bidding Risks & Clarifications */}
+          {activeTab === 'risks' && (
+            <div className="space-y-4">
+              {matrix.assessment.criticalRisks.length > 0 && (
+                <Card className="border border-rose-500/30 bg-rose-500/5 p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Identified Contractual Risks &amp; Scope Liabilities:</span>
+                  </div>
+                  <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                    {matrix.assessment.criticalRisks.map((risk, idx) => (
+                      <li key={idx}>{risk}</li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+
+              {matrix.assessment.clarificationQuestions.length > 0 && (
+                <Card className="border border-blue-500/30 bg-blue-500/5 p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-300">
+                    <HelpCircle className="h-4 w-4" />
+                    <span>Recommended Clarification Questions for Procurement Contact:</span>
+                  </div>
+                  <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                    {matrix.assessment.clarificationQuestions.map((q, idx) => (
+                      <li key={idx}>{q}</li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+
+              {matrix.assessment.keyStrengths.length > 0 && (
+                <Card className="border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Key Competitive Win Themes:</span>
+                  </div>
+                  <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                    {matrix.assessment.keyStrengths.map((str, idx) => (
+                      <li key={idx}>{str}</li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
