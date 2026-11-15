@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Info, X, Sparkles, LayoutTemplate, Mic } from 'lucide-react'
 import {
   initAnnaBridge,
   storageGet,
@@ -9,9 +9,17 @@ import {
 import { defaultBrandConfig, demoProposals, emptyFormData, normalizeProposal } from './defaults'
 import type { BrandConfig, GeneratedProposal, ProposalFormData, ProposalTemplate } from './types'
 import { calculatePricingTotals, formatCurrency } from './utils'
+import { AppSidebar, type NavigationTab } from './components/layout/AppSidebar'
 import { DashboardView } from './views/DashboardView'
+import { VoiceProposalView } from './views/VoiceProposalView'
+import { ProposalStudioView } from './views/ProposalStudioView'
+import { TemplateGalleryView } from './views/TemplateGalleryView'
+import { RfpIntelligenceView } from './views/RfpIntelligenceView'
+import { CompanyKnowledgeView } from './views/CompanyKnowledgeView'
+import { DealPipelineView } from './views/DealPipelineView'
+import { SettingsView } from './views/SettingsView'
 import { NewProposalView } from './views/NewProposalView'
-import { ProposalDetailView } from './views/ProposalDetailView'
+import { Button } from './components/ui/button'
 
 const STORAGE_PROPOSALS_KEY = 'ai-proposal-writer:proposals'
 const STORAGE_DRAFT_KEY = 'ai-proposal-writer:form_draft'
@@ -23,11 +31,13 @@ interface ToastMessage {
   text: string
 }
 
+type AppRoute = NavigationTab | 'new'
+
 export function App() {
   const [proposals, setProposals] = useState<GeneratedProposal[]>([])
   const [formDraft, setFormDraft] = useState<Partial<ProposalFormData>>(emptyFormData)
   const [brandConfig, setBrandConfig] = useState<BrandConfig>(defaultBrandConfig)
-  const [currentRoute, setCurrentRoute] = useState<'dashboard' | 'new' | 'detail'>('dashboard')
+  const [currentRoute, setCurrentRoute] = useState<AppRoute>('dashboard')
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [toasts, setToasts] = useState<ToastMessage[]>([])
@@ -51,21 +61,58 @@ export function App() {
   const applyHashRoute = useCallback(
     (hash: string, allProposals: GeneratedProposal[]) => {
       const clean = hash.replace(/^#\/?/, '')
-      if (!clean || clean === 'proposals' || clean === 'dashboard') {
+      if (!clean || clean === 'dashboard' || clean === 'proposals') {
         setCurrentRoute('dashboard')
         setSelectedProposalId(null)
-        setWindowTitle('Proposals — AI Proposal Writer')
+        setWindowTitle('Dashboard — AI Proposal Studio 3.0')
+      } else if (clean === 'voice') {
+        setCurrentRoute('voice')
+        setSelectedProposalId(null)
+        setWindowTitle('Voice-to-Proposal — AI Proposal Studio')
+      } else if (clean === 'rfp') {
+        setCurrentRoute('rfp')
+        setSelectedProposalId(null)
+        setWindowTitle('RFP Intelligence — AI Proposal Studio')
+      } else if (clean === 'templates') {
+        setCurrentRoute('templates')
+        setSelectedProposalId(null)
+        setWindowTitle('Template Gallery — AI Proposal Studio')
+      } else if (clean === 'knowledge') {
+        setCurrentRoute('knowledge')
+        setSelectedProposalId(null)
+        setWindowTitle('Knowledge Base — AI Proposal Studio')
+      } else if (clean === 'pipeline') {
+        setCurrentRoute('pipeline')
+        setSelectedProposalId(null)
+        setWindowTitle('Deal Pipeline — AI Proposal Studio')
+      } else if (clean === 'settings') {
+        setCurrentRoute('settings')
+        setSelectedProposalId(null)
+        setWindowTitle('Workspace Settings — AI Proposal Studio')
       } else if (clean === 'new' || clean === 'proposals/new') {
         setCurrentRoute('new')
         setSelectedProposalId(null)
-        setWindowTitle('New Proposal — AI Proposal Writer')
-      } else if (clean.startsWith('proposals/') || clean.startsWith('detail/')) {
+        setWindowTitle('New Proposal Wizard — AI Proposal Studio')
+      } else if (
+        clean.startsWith('studio/') ||
+        clean.startsWith('proposals/') ||
+        clean.startsWith('detail/')
+      ) {
         const id = clean.split('/')[1]
-        setCurrentRoute('detail')
+        setCurrentRoute('studio')
         setSelectedProposalId(id)
         const match = allProposals.find((p) => p.id === id)
         if (match) {
-          setWindowTitle(`${match.title} — AI Proposal Writer`)
+          setWindowTitle(`${match.title} — Proposal Studio`)
+        }
+      } else if (clean === 'studio') {
+        const firstId = allProposals[0]?.id
+        if (firstId) {
+          setCurrentRoute('studio')
+          setSelectedProposalId(firstId)
+          setWindowTitle(`${allProposals[0].title} — Proposal Studio`)
+        } else {
+          setCurrentRoute('templates')
         }
       }
     },
@@ -119,26 +166,67 @@ export function App() {
   const navigate = useCallback(
     (route: string, proposalId?: string) => {
       if (route === 'dashboard') {
-        window.location.hash = '#/proposals'
+        window.location.hash = '#/dashboard'
         setCurrentRoute('dashboard')
         setSelectedProposalId(null)
-        setWindowTitle('Proposals — AI Proposal Writer')
+        setWindowTitle('Dashboard — AI Proposal Studio 3.0')
+      } else if (route === 'studio') {
+        const targetId = proposalId || selectedProposalId || proposals[0]?.id
+        if (targetId) {
+          window.location.hash = `#/studio/${targetId}`
+          setCurrentRoute('studio')
+          setSelectedProposalId(targetId)
+          const match = proposals.find((p) => p.id === targetId)
+          if (match) setWindowTitle(`${match.title} — Proposal Studio`)
+        } else {
+          window.location.hash = '#/templates'
+          setCurrentRoute('templates')
+          setWindowTitle('Template Gallery — AI Proposal Studio')
+        }
+      } else if (route === 'voice') {
+        window.location.hash = '#/voice'
+        setCurrentRoute('voice')
+        setSelectedProposalId(null)
+        setWindowTitle('Voice-to-Proposal — AI Proposal Studio')
+      } else if (route === 'rfp') {
+        window.location.hash = '#/rfp'
+        setCurrentRoute('rfp')
+        setSelectedProposalId(null)
+        setWindowTitle('RFP Intelligence — AI Proposal Studio')
+      } else if (route === 'templates') {
+        window.location.hash = '#/templates'
+        setCurrentRoute('templates')
+        setSelectedProposalId(null)
+        setWindowTitle('Template Gallery — AI Proposal Studio')
+      } else if (route === 'knowledge') {
+        window.location.hash = '#/knowledge'
+        setCurrentRoute('knowledge')
+        setSelectedProposalId(null)
+        setWindowTitle('Knowledge Base — AI Proposal Studio')
+      } else if (route === 'pipeline') {
+        window.location.hash = '#/pipeline'
+        setCurrentRoute('pipeline')
+        setSelectedProposalId(null)
+        setWindowTitle('Deal Pipeline — AI Proposal Studio')
+      } else if (route === 'settings') {
+        window.location.hash = '#/settings'
+        setCurrentRoute('settings')
+        setSelectedProposalId(null)
+        setWindowTitle('Workspace Settings — AI Proposal Studio')
       } else if (route === 'new') {
         window.location.hash = '#/new'
         setCurrentRoute('new')
         setSelectedProposalId(null)
-        setWindowTitle('New Proposal — AI Proposal Writer')
+        setWindowTitle('New Proposal Wizard — AI Proposal Studio')
       } else if (route === 'detail' && proposalId) {
-        window.location.hash = `#/proposals/${proposalId}`
-        setCurrentRoute('detail')
+        window.location.hash = `#/studio/${proposalId}`
+        setCurrentRoute('studio')
         setSelectedProposalId(proposalId)
         const match = proposals.find((p) => p.id === proposalId)
-        if (match) {
-          setWindowTitle(`${match.title} — AI Proposal Writer`)
-        }
+        if (match) setWindowTitle(`${match.title} — Proposal Studio`)
       }
     },
-    [proposals]
+    [proposals, selectedProposalId]
   )
 
   // Save new proposal
@@ -174,6 +262,7 @@ export function App() {
       storageSet(STORAGE_PROPOSALS_KEY, next)
       return next
     })
+    toast.info('Proposal removed from workspace')
   }, [])
 
   // Update Brand Config
@@ -181,56 +270,6 @@ export function App() {
     setBrandConfig(updated)
     storageSet(STORAGE_BRAND_KEY, updated)
   }, [])
-
-  // Start Proposal from Template
-  const handleCreateProposalFromTemplate = useCallback(
-    (template: ProposalTemplate) => {
-      const defaultPricing = {
-        pricingModel: 'fixed' as const,
-        currency: brandConfig.defaultCurrency || ('USD' as const),
-        items: template.samplePricing,
-        taxPercent: 0,
-        discountPercent: 0,
-        paymentTerms: brandConfig.defaultPaymentTerms || '40% advance upon signing, 30% milestone review, 30% handover.',
-        depositPercent: 40,
-      }
-      const totals = calculatePricingTotals(defaultPricing)
-      const formattedTotal = formatCurrency(totals.grandTotal, defaultPricing.currency)
-
-      const draft: ProposalFormData = {
-        step1: {
-          ...emptyFormData.step1,
-          agencyName: brandConfig.companyName || emptyFormData.step1.agencyName,
-          agencyTagline: brandConfig.tagline || emptyFormData.step1.agencyTagline,
-          agencyEmail: brandConfig.email || emptyFormData.step1.agencyEmail,
-          agencyWebsite: brandConfig.website || emptyFormData.step1.agencyWebsite,
-          projectName: template.name,
-          projectType: template.projectType,
-          industry: template.industry,
-          problemStatement: template.sampleProblem,
-        },
-        step2: {
-          ...emptyFormData.step2,
-          keyFeatures: template.sampleFeatures.join('\n'),
-        },
-        step3: {
-          ...emptyFormData.step3,
-          pricingStructure: defaultPricing,
-          budgetRange: formattedTotal,
-        },
-        step4: {
-          ...emptyFormData.step4,
-          tone: template.defaultTone,
-          includedSections: template.sections,
-        },
-      }
-
-      setFormDraft(draft)
-      storageSet(STORAGE_DRAFT_KEY, draft)
-      navigate('new')
-    },
-    [brandConfig, navigate]
-  )
 
   // Draft persistence
   const handleSaveDraft = useCallback((draft: ProposalFormData) => {
@@ -253,69 +292,143 @@ export function App() {
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="text-center space-y-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
-          <p className="text-sm text-muted-foreground font-medium">Connecting to Anna App...</p>
+          <p className="text-sm text-muted-foreground font-medium">Connecting to AI Proposal Studio 3.0...</p>
         </div>
       </div>
     )
   }
 
   const selectedProposal = selectedProposalId
-    ? proposals.find((p) => p.id === selectedProposalId)
-    : null
+    ? proposals.find((p) => p.id === selectedProposalId) || proposals[0]
+    : proposals[0]
+
+  const activeTab: NavigationTab = currentRoute === 'new' ? 'dashboard' : currentRoute
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* View router */}
-      {currentRoute === 'dashboard' && (
-        <DashboardView
-          proposals={proposals}
-          brandConfig={brandConfig}
-          onUpdateBrandConfig={handleUpdateBrandConfig}
-          onNavigate={navigate}
-          onDeleteProposal={handleDeleteProposal}
-          onUpdateProposal={handleUpdateProposal}
-          onCreateProposalFromTemplate={handleCreateProposalFromTemplate}
-          toast={toast}
-        />
-      )}
+    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+      {/* Universal Left Navigation Sidebar */}
+      <AppSidebar
+        currentTab={activeTab}
+        onSelectTab={(tab) => navigate(tab)}
+        onNewProposal={() => navigate('new')}
+        proposalCount={proposals.length}
+        activeProposalTitle={selectedProposal?.title}
+        brandConfig={brandConfig}
+      />
 
-      {currentRoute === 'new' && (
-        <NewProposalView
-          initialDraft={formDraft}
-          onSaveDraft={handleSaveDraft}
-          onProposalGenerated={handleProposalGenerated}
-          onNavigate={navigate}
-          toast={toast}
-        />
-      )}
-
-      {currentRoute === 'detail' &&
-        (selectedProposal ? (
-          <ProposalDetailView
-            proposal={selectedProposal}
-            onUpdateProposal={handleUpdateProposal}
+      {/* Main View Area */}
+      <main className="flex-1 overflow-y-auto">
+        {currentRoute === 'dashboard' && (
+          <DashboardView
+            proposals={proposals}
+            brandConfig={brandConfig}
             onNavigate={navigate}
-            onEditInputs={handleEditInputs}
+            onDeleteProposal={handleDeleteProposal}
+            onUpdateProposal={handleUpdateProposal}
             toast={toast}
           />
-        ) : (
-          <div className="flex min-h-screen items-center justify-center bg-background px-4">
-            <div className="text-center space-y-4">
-              <h2 className="text-xl font-bold">Proposal Not Found</h2>
-              <p className="text-sm text-muted-foreground">
-                This proposal may have been deleted or does not exist in your workspace.
-              </p>
-              <button
-                onClick={() => navigate('dashboard')}
-                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600 cursor-pointer"
-              >
-                Return to Proposals Workspace
-              </button>
-            </div>
-          </div>
-        ))}
+        )}
 
-      {/* Floating toast stack */}
+        {currentRoute === 'studio' &&
+          (selectedProposal ? (
+            <ProposalStudioView
+              proposal={selectedProposal}
+              onUpdateProposal={handleUpdateProposal}
+              onNavigate={navigate}
+              onEditInputs={handleEditInputs}
+              toast={toast}
+            />
+          ) : (
+            <div className="flex min-h-screen items-center justify-center bg-background px-4">
+              <div className="text-center space-y-4 max-w-md">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <h2 className="text-xl font-bold">No Proposals Available</h2>
+                <p className="text-sm text-muted-foreground">
+                  Get started by picking a blueprint from the Template Gallery or dictate your project scope with Voice AI.
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <Button
+                    onClick={() => navigate('templates')}
+                    className="gap-2"
+                  >
+                    <LayoutTemplate className="h-4 w-4" />
+                    Browse Templates
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('voice')}
+                    className="gap-2"
+                  >
+                    <Mic className="h-4 w-4" />
+                    Voice Scoping
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+        {currentRoute === 'voice' && (
+          <VoiceProposalView
+            onProposalCreated={handleProposalGenerated}
+            onNavigateToStudio={(id) => navigate('studio', id)}
+            toast={toast}
+          />
+        )}
+
+        {currentRoute === 'rfp' && (
+          <RfpIntelligenceView
+            onProposalCreated={handleProposalGenerated}
+            onNavigateToStudio={(id) => navigate('studio', id)}
+            toast={toast}
+          />
+        )}
+
+        {currentRoute === 'templates' && (
+          <TemplateGalleryView
+            onProposalCreated={handleProposalGenerated}
+            onNavigateToStudio={(id) => navigate('studio', id)}
+            toast={toast}
+          />
+        )}
+
+        {currentRoute === 'knowledge' && (
+          <CompanyKnowledgeView toast={toast} />
+        )}
+
+        {currentRoute === 'pipeline' && (
+          <DealPipelineView
+            proposals={proposals}
+            onUpdateProposal={handleUpdateProposal}
+            onNavigateToStudio={(id) => navigate('studio', id)}
+            toast={toast}
+          />
+        )}
+
+        {currentRoute === 'settings' && (
+          <SettingsView
+            brandConfig={brandConfig}
+            onUpdateBrandConfig={handleUpdateBrandConfig}
+            toast={toast}
+          />
+        )}
+
+        {currentRoute === 'new' && (
+          <NewProposalView
+            initialDraft={formDraft}
+            onSaveDraft={handleSaveDraft}
+            onProposalGenerated={(prop) => {
+              handleProposalGenerated(prop)
+              navigate('studio', prop.id)
+            }}
+            onNavigate={navigate}
+            toast={toast}
+          />
+        )}
+      </main>
+
+      {/* Floating toast notification stack */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
         {toasts.map((t) => (
           <div
