@@ -1,0 +1,22 @@
+{
+  "slug": "ai-proposal-writer-anna",
+  "name": "ai-proposal-writer-anna",
+  "version": "3.0.0",
+  "tagline": "Aetherion Labs — AI Proposal & RFP Studio 3.0: Voice-to-Proposal, 3-Pane Document Studio & RFP Shredder.",
+  "description": "AI Proposal Writer 3.0 is a next-generation AI Proposal Studio, RFP Intelligence, and Commercial Deal Workspace purpose-built for digital agencies, consultancies, freelance developers, and professional service teams.\n\nTransform verbal ideas and multi-page client solicitations into high-converting, fully compliant proposals with Voice-to-Proposal (Web Speech API), a 3-Pane Document Studio, pre-built template blueprints, automated RFP requirements shredding, live 2-way compliance matrices, grounded company knowledge base, deterministic CPQ pricing, and multi-format exports (Microsoft Word .docx, Vector PDF, Markdown, and Pitch HTML).\n\n### 3.0 Studio Transformation Capabilities\n\n1. Voice-to-Proposal Studio:\n- Speak naturally in English, Hindi, Hinglish, Tamil, or Urdu. Web Speech API live transcription extracts structured project scope, detects missing constraints, and drafts full proposals in seconds.\n\n2. 3-Pane AI Proposal Studio:\n- Professional document workstation featuring Collapsible Outline with drag-and-drop section reordering on the left, Rich Visual Document Canvas in the center, and Integrated AI Intelligence Studio Copilot on the right.\n\n3. Pre-Engineered Template Blueprints:\n- 8+ battle-tested architectures across Web Development, AI/Machine Learning Systems, Strategic IT Advisory, Digital Marketing, and Enterprise RFP responses.\n\n4. AI RFP Shredder & Clause Extractor:\n- Parses unstructured RFP documents (.txt, .md, .docx text extract, emails) to detect mandatory compliance language ('shall', 'must', 'will', technical constraints, deadlines, and evaluation criteria).\n\n5. Live 2-Way RFP Compliance Matrix:\n- Maps extracted requirements directly to proposal sections, flags coverage gaps, and enables 1-click 'Inject Compliance Clause' to eliminate disqualification risks. Export to CSV for audit reviews.\n\n6. Company Knowledge Base & Context Grounder (Lightweight RAG):\n- Stores verified agency case studies, security credentials (SOC2, HIPAA), team profiles, and standard warranties in local Anna Storage, grounding proposal generation in real facts.\n\n7. Multi-Format Enterprise Export Suite:\n- One-click native Microsoft Word (.docx) export with styled headings and tables, pixel-perfect Vector A4 PDF, GitHub-flavored Markdown, and standalone offline HTML presentations.\n\n8. Interactive Client Presentation & Dynamic CPQ:\n- Web presentation mode where clients can toggle optional service add-ons or tiers with immediate deterministic recalculation before digital sign-off.\n\n9. Commercial Deal Pipeline & Kanban CRM:\n- Visual Kanban deal stages (Drafting, Internal Review, Sent, Won/Accepted, Declined) with drag-and-drop status transitions.",
+  "category": "productivity",
+  "screenshots": [
+    "screenshots/v3_0/1_dashboard.png",
+    "screenshots/v3_0/2_voice_studio.png",
+    "screenshots/v3_0/3_proposal_studio_3pane.png",
+    "screenshots/v3_0/4_template_gallery.png",
+    "screenshots/v3_0/5_rfp_intelligence.png",
+    "screenshots/v3_0/6_knowledge_base.png",
+    "screenshots/v3_0/7_deal_pipeline.png"
+  ],
+  "bundled_executas": {
+    "ai-proposal-writer-anna": {
+      "path": "./executas/ai-proposal-writer-anna"
+    }
+  }
+}

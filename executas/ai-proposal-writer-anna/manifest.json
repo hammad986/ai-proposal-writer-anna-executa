@@ -1,0 +1,183 @@
+{
+  "name": "tool-hammad-ai-proposal-writer-anna-84jkbu68",
+  "slug": "ai-proposal-writer-anna",
+  "display_name": "AI Proposal Writer Tool",
+  "version": "0.4.0",
+  "description": "JSON-RPC tool plugin powering AI Proposal Writer with proposal generation, section regeneration, quality audit, text refinement, version comparison, ROI calculation, deal health analysis, contract risk scan, and discovery questions.",
+  "host_capabilities": ["llm.sample"],
+  "tools": [
+    {
+      "name": "ping",
+      "description": "Smoke-test method.",
+      "parameters": []
+    },
+    {
+      "name": "generate_proposal",
+      "description": "Generate a complete structured project proposal from input form data.",
+      "parameters": [
+        {
+          "name": "formData",
+          "type": "object",
+          "description": "Proposal form data containing steps 1 to 4.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "regenerate_section",
+      "description": "Regenerate a specific section of a proposal using AI.",
+      "parameters": [
+        {
+          "name": "formData",
+          "type": "object",
+          "description": "Proposal form data.",
+          "required": true
+        },
+        {
+          "name": "sectionTitle",
+          "type": "string",
+          "description": "Title of the section to regenerate.",
+          "required": true
+        },
+        {
+          "name": "currentContent",
+          "type": "string",
+          "description": "Current section content for context.",
+          "required": false
+        },
+        {
+          "name": "instruction",
+          "type": "string",
+          "description": "Specific user instructions for how to rewrite the section.",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "audit_proposal",
+      "description": "Conduct a comprehensive AI Quality Assurance audit of a proposal, scoring completeness, pricing math, risk coverage, and clarity.",
+      "parameters": [
+        {
+          "name": "proposal",
+          "type": "object",
+          "description": "Complete proposal object to evaluate.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "refine_text",
+      "description": "Refine or rewrite proposal text with a specific instruction (improve tone, make concise, expand technical details, simplify, add risks).",
+      "parameters": [
+        {
+          "name": "text",
+          "type": "string",
+          "description": "Original text to refine.",
+          "required": true
+        },
+        {
+          "name": "instruction",
+          "type": "string",
+          "description": "Instruction: 'improve_tone' | 'make_concise' | 'expand_details' | 'simplify' | 'add_risks'.",
+          "required": true
+        },
+        {
+          "name": "context",
+          "type": "string",
+          "description": "Optional context such as proposal title or client company.",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "extract_brief",
+      "description": "Extract structured proposal fields (client, project, problem, features, budget) from unstructured client RFP or brief text.",
+      "parameters": [
+        {
+          "name": "briefText",
+          "type": "string",
+          "description": "Raw project brief, email, or RFP text.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "compare_versions",
+      "description": "Analyze differences between two proposal versions and provide an executive changelog summary of scope, pricing, and risk alterations.",
+      "parameters": [
+        {
+          "name": "versionA",
+          "type": "object",
+          "description": "Original proposal snapshot.",
+          "required": true
+        },
+        {
+          "name": "versionB",
+          "type": "object",
+          "description": "Target proposal snapshot.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "calculate_roi",
+      "description": "Deterministically model client ROI, hours saved, monthly/annual savings, payback period, and 3-year net value.",
+      "parameters": [
+        {
+          "name": "budget",
+          "type": "number",
+          "description": "Total proposal commercial investment budget.",
+          "required": true
+        },
+        {
+          "name": "hoursSavedPerMonth",
+          "type": "number",
+          "description": "Estimated operational hours saved per month.",
+          "required": false
+        },
+        {
+          "name": "hourlyRate",
+          "type": "number",
+          "description": "Client average hourly rate value.",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "analyze_deal_health",
+      "description": "Predictive AI deal health & win probability scoring analyzing scope, deposit security, and objection handling.",
+      "parameters": [
+        {
+          "name": "proposal",
+          "type": "object",
+          "description": "Complete proposal object to evaluate.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "scan_contract_risks",
+      "description": "AI legal and scope vulnerability scan detecting revision creep, stalling risks, and liability exposure.",
+      "parameters": [
+        {
+          "name": "proposal",
+          "type": "object",
+          "description": "Complete proposal object to scan.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "generate_discovery_questions",
+      "description": "Synthesize tailored project discovery intake questions to eliminate scoping assumptions.",
+      "parameters": [
+        {
+          "name": "formData",
+          "type": "object",
+          "description": "Proposal form data containing steps 1 to 4.",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

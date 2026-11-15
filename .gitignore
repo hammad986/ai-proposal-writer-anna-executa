@@ -1,0 +1,12 @@
+node_modules/
+.anna/
+__pycache__/
+*.egg-info/
+.DS_Store
+Thumbs.db
+dist/
+build/
+build-win/
+*.spec
+*.log
+

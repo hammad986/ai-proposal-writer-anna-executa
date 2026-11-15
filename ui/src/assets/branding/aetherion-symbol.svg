@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="aetherion-left" x1="20" y1="20" x2="60" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#4338CA" />
+    </linearGradient>
+    <linearGradient id="aetherion-right" x1="100" y1="20" x2="60" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#818CF8" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+    <linearGradient id="aetherion-core" x1="40" y1="50" x2="80" y2="85" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A5B4FC" />
+      <stop offset="100%" stop-color="#6366F1" />
+    </linearGradient>
+    <linearGradient id="aetherion-glow" x1="60" y1="10" x2="60" y2="110" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F46E5" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Backdrop -->
+  <rect width="120" height="120" rx="28" fill="#0B0F19" />
+  <rect width="120" height="120" rx="28" stroke="#1E293B" stroke-width="1.5" />
+
+  <!-- Left Facet Pillar of A -->
+  <path d="M60 18 L24 94 L42 94 L60 52 Z" fill="url(#aetherion-left)" />
+
+  <!-- Right Facet Pillar of A -->
+  <path d="M60 18 L60 52 L78 94 L96 94 Z" fill="url(#aetherion-right)" />
+
+  <!-- Central Prismatic Keystone Crossbar -->
+  <polygon points="46,68 74,68 66,82 54,82" fill="url(#aetherion-core)" />
+
+  <!-- Apex Precision Vertex Highlight -->
+  <circle cx="60" cy="18" r="2.5" fill="#EEF2FF" />
+</svg>
