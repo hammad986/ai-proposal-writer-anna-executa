@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
+import { AetherionLogo } from '@/components/branding/AetherionLogo'
 import { ClientPreviewModal } from '@/components/proposal/client-preview-modal'
 import { generateProposalPdf } from '@/pdf-generator'
 import { generateProposalDocx } from '@/docx-generator'
@@ -111,17 +112,15 @@ export function DashboardView({
       {/* Top Welcome & KPIs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-3 mb-1.5">
+            <AetherionLogo variant="horizontal" size="md" />
             <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5" />
               AI Proposal Studio 3.0
             </span>
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-foreground">
-            {brandConfig.companyName || 'Proposal Workspace'}
-          </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Create high-converting, compliant proposals using Voice, AI RFP Shredding, or Guided Scoping.
+            Enterprise Proposal &amp; RFP Intelligence Workspace. Engineered by Aetherion Labs.
           </p>
         </div>
 

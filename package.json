@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node tests/test_dates_frontend.mjs && node tests/test_pricing_and_audit.mjs && python3 tests/test_proposal_dates.py && python3 tests/test_executa_v020.py"
+    "test": "node tests/test_dates_frontend.mjs && node tests/test_pricing_and_audit.mjs && node tests/test_voice_engine.mjs && node tests/test_rfp_intelligence.mjs && node tests/test_rag_engine.mjs && node tests/test_studio_undo.mjs && python3 tests/test_proposal_dates.py && python3 tests/test_executa_v020.py"
   },
   "dependencies": {
     "clsx": "^2.1.1",

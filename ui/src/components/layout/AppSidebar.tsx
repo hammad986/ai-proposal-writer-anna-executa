@@ -16,6 +16,7 @@ import {
   Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AetherionLogo } from '@/components/branding/AetherionLogo'
 import type { BrandConfig } from '@/types'
 
 export type NavigationTab =
@@ -65,32 +66,22 @@ export function AppSidebar({
       }`}
     >
       {/* Brand Header */}
-      <div className="flex h-16 items-center justify-between border-b px-4">
+      <div className="flex h-16 items-center justify-between border-b px-3">
         {!collapsed && (
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-primary text-white shadow-md shadow-primary/20">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <div className="overflow-hidden">
-              <h1 className="text-sm font-bold tracking-tight text-foreground truncate">
-                {brandConfig.companyName || 'Proposal Studio'}
-              </h1>
-              <p className="text-[10px] font-medium text-muted-foreground truncate">
-                AI Workspace 3.0
-              </p>
-            </div>
+          <div className="flex items-center gap-2 overflow-hidden">
+            <AetherionLogo variant="horizontal" size="sm" showTagline />
           </div>
         )}
 
         {collapsed && (
-          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-primary text-white shadow-md shadow-primary/20">
-            <Sparkles className="h-4 w-4" />
+          <div className="mx-auto">
+            <AetherionLogo variant="symbol" size="sm" />
           </div>
         )}
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+          className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { AetherionLogo } from '@/components/branding/AetherionLogo'
 import type { BrandConfig, CurrencyCode } from '@/types'
 
 interface SettingsViewProps {
@@ -53,6 +54,32 @@ export function SettingsView({
         <p className="text-sm text-muted-foreground">
           Configure your agency identity, contact details, currency, and default commercial terms applied to all proposals and document exports.
         </p>
+      </div>
+
+      {/* Brand Identity Showcase */}
+      <div className="rounded-xl border bg-card p-5 space-y-3 shadow-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Official Brand Assets &amp; Mark
+          </span>
+          <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+            Vector SVG Master
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+          <div className="flex flex-col items-center justify-center p-4 rounded-lg border bg-background/50 space-y-2">
+            <AetherionLogo variant="horizontal" size="md" showTagline />
+            <span className="text-[10px] text-muted-foreground font-medium">Primary Horizontal</span>
+          </div>
+          <div className="flex flex-col items-center justify-center p-4 rounded-lg border bg-slate-950 text-white space-y-2">
+            <AetherionLogo variant="horizontal" size="md" showTagline theme="dark" />
+            <span className="text-[10px] text-slate-400 font-medium">Dark Background Lockup</span>
+          </div>
+          <div className="flex flex-col items-center justify-center p-4 rounded-lg border bg-background/50 space-y-2">
+            <AetherionLogo variant="symbol" size="lg" />
+            <span className="text-[10px] text-muted-foreground font-medium">Symbol Keystone Mark</span>
+          </div>
+        </div>
       </div>
 
       <Card className="border shadow-md">
