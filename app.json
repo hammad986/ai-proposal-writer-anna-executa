@@ -9,10 +9,9 @@
     "screenshots/v3_0/1_dashboard.png",
     "screenshots/v3_0/2_voice_studio.png",
     "screenshots/v3_0/3_proposal_studio_3pane.png",
-    "screenshots/v3_0/4_template_gallery.png",
+    "screenshots/v3_0/10_client_portal_esign.png",
     "screenshots/v3_0/5_rfp_intelligence.png",
-    "screenshots/v3_0/6_knowledge_base.png",
-    "screenshots/v3_0/7_deal_pipeline.png"
+    "screenshots/v3_0/6_knowledge_base.png"
   ],
   "bundled_executas": {
     "ai-proposal-writer-anna": {
